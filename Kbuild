@@ -13,6 +13,10 @@ ifeq ($(KERNEL_BUILD), y)
 	WLAN_ROOT := drivers/staging/qcacld-3.0
 	WLAN_COMMON_ROOT := ../qca-wifi-host-cmn
 	WLAN_COMMON_INC := $(WLAN_ROOT)/$(WLAN_COMMON_ROOT)
+
+	# Disable debugging by forcing BUILD_VARIANT user if
+	# we are building this outside of Android
+	TARGET_BUILD_VARIANT := user
 endif
 
 WLAN_COMMON_ROOT ?= ../qca-wifi-host-cmn
