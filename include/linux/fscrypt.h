@@ -21,10 +21,6 @@
 
 #define FS_CRYPTO_BLOCK_SIZE		16
 
-/* iv sector for security/pfe/pfk_fscrypt.c and f2fs */
-#define PG_DUN(i, p)                                            \
-	(((((u64)(i)->i_ino) & 0xffffffff) << 32) | ((p)->index & 0xffffffff))
-
 union fscrypt_context;
 struct fscrypt_info;
 struct seq_file;
