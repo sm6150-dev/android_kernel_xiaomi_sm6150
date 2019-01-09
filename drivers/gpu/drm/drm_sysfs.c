@@ -299,6 +299,16 @@ static ssize_t fod_ui_ready_show(struct device *device,
 	return dsi_display_fod_get(connector, buf);
 }
 
+static ssize_t hbm_status_show(struct device *device,
+			   struct device_attribute *attr,
+			   char *buf)
+{
+	struct drm_connector *connector = to_drm_connector(device);
+	struct drm_device *dev = connector->dev;
+
+	return snprintf(buf, PAGE_SIZE, "%d\n", dev->hbm_status);
+}
+
 static DEVICE_ATTR_RW(status);
 static DEVICE_ATTR_RO(enabled);
 static DEVICE_ATTR_RO(dpms);
@@ -307,6 +317,7 @@ static DEVICE_ATTR_RO(panel_info);
 static DEVICE_ATTR_RW(disp_param);
 static DEVICE_ATTR_RW(doze_brightness);
 static DEVICE_ATTR_RO(fod_ui_ready);
+static DEVICE_ATTR_RO(hbm_status);
 
 static struct attribute *connector_dev_attrs[] = {
 	&dev_attr_status.attr,
@@ -317,6 +328,7 @@ static struct attribute *connector_dev_attrs[] = {
 	&dev_attr_disp_param.attr,
 	&dev_attr_doze_brightness.attr,
 	&dev_attr_fod_ui_ready.attr,
+	&dev_attr_hbm_status.attr,
 	NULL
 };
 
