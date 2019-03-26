@@ -23,6 +23,7 @@
 #include "dsi_panel.h"
 #include "dsi_ctrl_hw.h"
 #include "dsi_parser.h"
+#include "sde_trace.h"
 
 /**
  * topology is currently defined by a set of following 3 values:
@@ -4668,4 +4669,26 @@ int dsi_panel_apply_hbm_mode(struct dsi_panel *panel)
 	mutex_unlock(&panel->panel_lock);
 
 	return rc;
+}
+
+int dsi_panel_idle(struct dsi_panel *panel)
+{
+	if (unlikely(!panel))
+		return -EINVAL;
+
+	if (panel->funcs && panel->funcs->idle)
+		return panel->funcs->idle(panel);
+
+	return 0;
+}
+
+int dsi_panel_wakeup(struct dsi_panel *panel)
+{
+	if (unlikely(!panel))
+		return -EINVAL;
+
+	if (panel->funcs && panel->funcs->wakeup)
+		return panel->funcs->wakeup(panel);
+
+	return 0;
 }
