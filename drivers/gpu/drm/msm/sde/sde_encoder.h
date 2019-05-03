@@ -349,4 +349,12 @@ int sde_encoder_in_cont_splash(struct drm_encoder *enc);
  */
 int sde_encoder_get_ctlstart_timeout_state(struct drm_encoder *enc);
 
+#ifndef CONFIG_MACH_XIAOMI_F7B
+/**
+ * sde_encoder_trigger_early_wakeup - trigger early wake up
+ * @drm_enc:    Pointer to drm encoder structure
+ */
+void sde_encoder_trigger_early_wakeup(struct drm_encoder *drm_enc);
+#endif
+
 #endif /* __SDE_ENCODER_H__ */
