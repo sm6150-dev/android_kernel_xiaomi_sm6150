@@ -1238,16 +1238,22 @@ static const struct apsd_result *smblib_update_usb_type(struct smb_charger *chg)
 		chg->usb_psy_desc.type = POWER_SUPPLY_TYPE_USB_PD;
 	} else if (chg->qc3p5_detected) {
 		chg->real_charger_type = POWER_SUPPLY_TYPE_USB_HVDCP_3P5;
+		chg->usb_psy_desc.type = POWER_SUPPLY_TYPE_USB_HVDCP_3P5;
 	} else {
 		/*
 		 * Update real charger type only if its not FLOAT
 		 * detected as as SDP
 		 */
+#ifdef CONFIG_MACH_XIAOMI_SDMMAGPIE
 		if (!(apsd_result->pst == POWER_SUPPLY_TYPE_USB_FLOAT &&
 			chg->real_charger_type == POWER_SUPPLY_TYPE_USB)) {
 			chg->real_charger_type = apsd_result->pst;
 			chg->usb_psy_desc.type = apsd_result->pst;
 		}
+#else
+		chg->real_charger_type = apsd_result->pst;
+		chg->usb_psy_desc.type = apsd_result->pst;
+#endif
 	}
 
 	smblib_dbg(chg, PR_MISC, "APSD=%s PD=%d QC3P5=%d\n",
@@ -1460,9 +1466,16 @@ void smblib_suspend_on_debug_battery(struct smb_charger *chg)
 	}
 }
 
+#ifdef CONFIG_MACH_XIAOMI_SM6150
+static bool off_charge_flag;
+#endif
+
 int smblib_rerun_apsd_if_required(struct smb_charger *chg)
 {
 	union power_supply_propval val;
+#ifdef CONFIG_MACH_XIAOMI_SM6150
+	const struct apsd_result *apsd_result;
+#endif
 	int rc;
 
 	rc = smblib_get_prop_usb_present(chg, &val);
@@ -1474,12 +1487,32 @@ int smblib_rerun_apsd_if_required(struct smb_charger *chg)
 	if (!val.intval || chg->fake_usb_insertion)
 		return 0;
 
+#ifdef CONFIG_MACH_XIAOMI_SDMMAGPIE
 	rc = smblib_request_dpdm(chg, true);
 	if (rc < 0)
 		smblib_err(chg, "Couldn't to enable DPDM rc=%d\n", rc);
 
 	chg->uusb_apsd_rerun_done = true;
 	smblib_rerun_apsd(chg);
+
+#else
+	chg->uusb_apsd_rerun_done = true;
+	if (!off_charge_flag) {
+		rc = smblib_request_dpdm(chg, true);
+		if (rc < 0)
+			smblib_err(chg, "Couldn't to enable DPDM rc=%d\n", rc);
+		smblib_rerun_apsd(chg);
+	} else {
+		apsd_result = smblib_update_usb_type(chg);
+		/* if apsd result is SDP and off-charge mode, no need rerun apsd */
+		if (!(apsd_result->bit & SDP_CHARGER_BIT)) {
+			rc = smblib_request_dpdm(chg, true);
+			if (rc < 0)
+				smblib_err(chg, "Couldn't to enable DPDM rc=%d\n", rc);
+			smblib_rerun_apsd(chg);
+		}
+	}
+#endif
 
 	return 0;
 }
@@ -2176,6 +2209,9 @@ int smblib_get_prop_batt_status(struct smb_charger *chg,
 	bool usb_online;
 	u8 stat;
 	int rc, suspend = 0;
+#ifdef CONFIG_MACH_XIAOMI_SM6150
+	int batt_health;
+#endif
 
 	if (chg->use_bq_pump && (get_client_vote_locked(chg->usb_icl_votable,
 					MAIN_CHG_VOTER) == MAIN_CHARGER_STOP_ICL)) {
@@ -2215,6 +2251,16 @@ int smblib_get_prop_batt_status(struct smb_charger *chg,
 		return rc;
 	}
 	usb_online = (bool)pval.intval;
+
+#ifdef CONFIG_MACH_XIAOMI_SM6150
+	rc = smblib_get_prop_batt_health(chg, &pval);
+	if (rc < 0) {
+		smblib_err(chg, "Couldn't get batt health property rc=%d\n",
+			rc);
+		return rc;
+	}
+	batt_health = pval.intval;
+#endif
 
 	rc = smblib_read(chg, BATTERY_CHARGER_STATUS_1_REG, &stat);
 	if (rc < 0) {
@@ -2272,6 +2318,15 @@ int smblib_get_prop_batt_status(struct smb_charger *chg,
 		val->intval = POWER_SUPPLY_STATUS_UNKNOWN;
 		break;
 	}
+
+#ifdef CONFIG_MACH_XIAOMI_SM6150
+	if ((POWER_SUPPLY_HEALTH_WARM == batt_health
+		||POWER_SUPPLY_HEALTH_OVERHEAT == batt_health)
+		&& (val->intval == POWER_SUPPLY_STATUS_FULL)){
+		val->intval = POWER_SUPPLY_STATUS_CHARGING;
+		return 0;
+	}
+#endif
 
 	if (is_charging_paused(chg)) {
 		val->intval = POWER_SUPPLY_STATUS_CHARGING;
@@ -4072,12 +4127,25 @@ int smblib_get_prop_usb_voltage_max_design(struct smb_charger *chg,
 				QC2_NON_COMPLIANT_12V) {
 			val->intval = MICRO_9V;
 			break;
+		} else if (chg->qc2_unsupported) {
+			val->intval = MICRO_5V;
+			break;
 		}
+#ifdef CONFIG_MACH_XIAOMI_SM6150
+		val->intval = MICRO_9V;
+		break;
+#endif
+
 		/* else, fallthrough */
 	case POWER_SUPPLY_TYPE_USB_HVDCP_3P5:
 	case POWER_SUPPLY_TYPE_USB_HVDCP_3:
 	case POWER_SUPPLY_TYPE_USB_PD:
+#ifdef CONFIG_MACH_XIAOMI_SM6150
+		if (chg->chg_param.smb_version == PMI632_SUBTYPE
+			|| chg->chg_param.smb_version == PM6150_SUBTYPE)
+#else
 		if (chg->chg_param.smb_version == PMI632_SUBTYPE)
+#endif
 			val->intval = MICRO_9V;
 		else
 			val->intval = MICRO_12V;
@@ -4409,8 +4477,12 @@ static int smblib_get_prop_ufp_mode(struct smb_charger *chg)
 		return POWER_SUPPLY_TYPEC_SOURCE_DEFAULT;
 	}
 
+#ifdef CONFIG_MACH_XIAOMI_SDMMAGPIE
 	if (stat & SNK_DEBUG_ACC_RPSTD_PRSTD_BIT && usb_present) {
 		chg->snk_debug_acc_detected = true;
+#else
+	if (stat & SNK_DEBUG_ACC_RPSTD_PRSTD_BIT) {
+#endif
 		return POWER_SUPPLY_TYPEC_SOURCE_DEFAULT;
 	}
 
@@ -4901,6 +4973,116 @@ int smblib_set_prop_pd_current_max(struct smb_charger *chg,
 	return rc;
 }
 
+#ifdef CONFIG_MACH_XIAOMI_SM6150
+#define SUSPEND_CURRENT_UA  2000
+static int smblib_handle_usb_current(struct smb_charger *chg,
+					int usb_current)
+{
+	int rc = 0, rp_ua, typec_mode;
+	bool is_float = false;
+	union power_supply_propval val = {0, };
+
+	if (chg->real_charger_type == POWER_SUPPLY_TYPE_USB_FLOAT
+				&& (usb_current == SUSPEND_CURRENT_UA))
+		is_float = true;
+
+	if (chg->real_charger_type == POWER_SUPPLY_TYPE_USB) {
+		if (usb_current > 0 && usb_current < USBIN_500MA)
+			usb_current = USBIN_500MA;
+		else if (usb_current >= USBIN_500MA)
+			usb_current = USBIN_900MA;
+	}
+
+	if (chg->real_charger_type == POWER_SUPPLY_TYPE_USB_FLOAT) {
+		if (usb_current == -ETIMEDOUT || is_float) {
+			/* we do not use USB500mA for float charger */
+#if 0
+			if ((chg->float_cfg & FLOAT_OPTIONS_MASK)
+				== FORCE_FLOAT_SDP_CFG_BIT &&
+				apsd_now->pst == POWER_SUPPLY_TYPE_USB) {
+				/*
+				 * Confiugure USB500 mode if Float charger is
+				 * configured for SDP mode.
+				 */
+				rc = vote(chg->usb_icl_votable,
+					SW_ICL_MAX_VOTER, true, USBIN_500MA);
+				if (rc < 0)
+					smblib_err(chg,
+						"Couldn't set SDP ICL rc=%d\n",
+						rc);
+				return rc;
+			}
+#endif
+
+			if (chg->connector_type ==
+					POWER_SUPPLY_CONNECTOR_TYPEC) {
+				/*
+				 * Valid FLOAT charger, report the current
+				 * based of Rp.
+				 */
+				typec_mode = smblib_get_prop_typec_mode(chg);
+				rp_ua = get_rp_based_dcp_current(chg,
+								typec_mode);
+				if (rp_ua == DCP_CURRENT_UA)
+					rp_ua = FLOAT_CHARGER_UA;
+
+				rc = vote(chg->usb_icl_votable,
+						SW_ICL_MAX_VOTER, true, rp_ua);
+				if (rc < 0)
+					return rc;
+			} else {
+				rc = vote(chg->usb_icl_votable,
+					SW_ICL_MAX_VOTER, true, DCP_CURRENT_UA);
+				if (rc < 0)
+					return rc;
+			}
+		} else {
+			/*
+			 * FLOAT charger detected as SDP by USB driver,
+			 * charge with the requested current and update the
+			 * real_charger_type
+			 */
+			chg->real_charger_type = POWER_SUPPLY_TYPE_USB;
+			chg->usb_psy_desc.type = POWER_SUPPLY_TYPE_USB;
+			rc = vote(chg->usb_icl_votable, USB_PSY_VOTER,
+						true, usb_current);
+			if (rc < 0)
+				return rc;
+			rc = vote(chg->usb_icl_votable, SW_ICL_MAX_VOTER,
+							false, 0);
+			if (rc < 0)
+				return rc;
+		}
+	} else {
+		rc = smblib_get_prop_usb_present(chg, &val);
+		if (!rc && !val.intval)
+			return 0;
+
+		if ((chg->real_charger_type == POWER_SUPPLY_TYPE_USB
+			|| chg->real_charger_type == POWER_SUPPLY_TYPE_USB_CDP) &&
+			usb_current == SUSPEND_CURRENT_UA)
+			rc = vote(chg->usb_icl_votable, USB_PSY_VOTER,
+						true, USBIN_500MA);
+		else
+			rc = vote(chg->usb_icl_votable, USB_PSY_VOTER,
+						true, usb_current);
+
+		if (rc < 0) {
+			pr_err("Couldn't vote ICL USB_PSY_VOTER rc=%d\n", rc);
+			return rc;
+		}
+
+		rc = vote(chg->usb_icl_votable, SW_ICL_MAX_VOTER, false, 0);
+		if (rc < 0) {
+			pr_err("Couldn't remove SW_ICL_MAX vote rc=%d\n", rc);
+			return rc;
+		}
+
+	}
+
+	return 0;
+}
+#else
 static int smblib_handle_usb_current(struct smb_charger *chg,
 					int usb_current)
 {
@@ -5004,6 +5186,7 @@ static int smblib_handle_usb_current(struct smb_charger *chg,
 
 	return 0;
 }
+#endif
 
 int smblib_set_prop_sdp_current_max(struct smb_charger *chg,
 				    const union power_supply_propval *val)
@@ -5642,9 +5825,16 @@ int smblib_get_charge_current(struct smb_charger *chg,
 			break;
 		case DCP_CHARGER_BIT:
 		case OCP_CHARGER_BIT:
+#ifdef CONFIG_MACH_XIAOMI_SDMMAGPIE
 		case FLOAT_CHARGER_BIT:
+#endif
 			current_ua = DCP_CURRENT_UA;
 			break;
+#ifdef CONFIG_MACH_XIAOMI_SM6150
+		case FLOAT_CHARGER_BIT:
+			current_ua = HVDCP_START_CURRENT_UA;
+			break;
+#endif
 		default:
 			current_ua = 0;
 			break;
@@ -5662,9 +5852,16 @@ int smblib_get_charge_current(struct smb_charger *chg,
 			break;
 		case DCP_CHARGER_BIT:
 		case OCP_CHARGER_BIT:
+#ifdef CONFIG_MACH_XIAOMI_SDMMAGPIE
 		case FLOAT_CHARGER_BIT:
+#endif
 			current_ua = chg->default_icl_ua;
 			break;
+#ifdef CONFIG_MACH_XIAOMI_SM6150
+		case FLOAT_CHARGER_BIT:
+			current_ua = HVDCP_START_CURRENT_UA;
+			break;
+#endif
 		default:
 			current_ua = 0;
 			break;
@@ -6692,6 +6889,13 @@ static void smblib_handle_hvdcp_3p0_auth_done(struct smb_charger *chg,
 					chg->already_start_step_charge_work = true;
 				}
 			}
+		} else if (chg->sec_cp_present & QC_2P0_BIT && !chg->qc2_unsupported) {
+			pr_info("force 9V for QC2 charger\n");
+			rc = smblib_force_vbus_voltage(chg, FORCE_9V_BIT);
+			if (rc < 0)
+				pr_err("Failed to force 9V\n");
+			vote(chg->usb_icl_votable, SW_ICL_MAX_VOTER, true,
+					HVDCP2_CURRENT_UA);
 		}
 
 		/* QC3.5 detection timeout */
@@ -9416,3 +9620,16 @@ int smblib_deinit(struct smb_charger *chg)
 
 	return 0;
 }
+
+#ifdef CONFIG_MACH_XIAOMI_SM6150
+static int __init early_parse_off_charge_flag(char *p)
+{
+	if (p) {
+		if (!strcmp(p, "charger"))
+			off_charge_flag = true;
+	}
+
+	return 0;
+}
+early_param("androidboot.mode", early_parse_off_charge_flag);
+#endif

@@ -445,6 +445,14 @@ static void update_msoc(struct qpnp_qg *chip)
 {
 	int rc = 0, sdam_soc, batt_temp = 0, batt_cur = 0;
 	bool input_present = is_input_present(chip);
+#ifdef CONFIG_MACH_XIAOMI_SM6150
+	union power_supply_propval hpval = {0,};
+
+	rc = chip->batt_psy->desc->get_property(chip->batt_psy,
+					POWER_SUPPLY_PROP_HEALTH, &hpval);
+	if (rc < 0)
+		pr_err("Failed to get battery healthd status rc=%d\n", rc);
+#endif
 
 	rc = qg_get_battery_current(chip, &batt_cur);
 	if (rc < 0) {
@@ -452,8 +460,19 @@ static void update_msoc(struct qpnp_qg *chip)
 	}
 	if (chip->catch_up_soc > chip->msoc) {
 		/* SOC increased */
+#ifndef CONFIG_MACH_XIAOMI_SM6150
 		if (input_present) /* Increment if input is present */
 			chip->msoc += chip->dt.delta_soc;
+#else
+		if (input_present) {
+			if (chip->charge_status == POWER_SUPPLY_STATUS_CHARGING &&
+				(hpval.intval != POWER_SUPPLY_HEALTH_WARM ||
+				hpval.intval != POWER_SUPPLY_HEALTH_OVERHEAT)) {
+				/* USB is present and SOC has increased */
+				chip->msoc += chip->dt.delta_soc;
+			}
+		}
+#endif
 	} else if (chip->catch_up_soc < chip->msoc) {
 		/* SOC dropped */
 		if (batt_cur > 0) {
