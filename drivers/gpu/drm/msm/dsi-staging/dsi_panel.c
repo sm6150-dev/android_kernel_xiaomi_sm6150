@@ -620,11 +620,14 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 
 	dsi = &panel->mipi_device;
 
-	rc = mipi_dsi_dcs_set_display_brightness(dsi, bl_lvl);
-	if (rc < 0)
-		pr_err("failed to update dcs backlight:%d\n", bl_lvl);
+    if (panel->bl_config.dcs_type_ss_ea || panel->bl_config.dcs_type_ss_eb)
+        rc = mipi_dsi_dcs_set_display_brightness_ss(dsi, bl_lvl);
+    else
+        rc = mipi_dsi_dcs_set_display_brightness(dsi, bl_lvl);
 
-	return rc;
+    if (rc < 0) pr_err("failed to update dcs backlight:%d\n", bl_lvl);
+
+    return rc;
 }
 
 static int dsi_panel_update_pwm_backlight(struct dsi_panel *panel,
@@ -2266,7 +2269,13 @@ static int dsi_panel_parse_bl_config(struct dsi_panel *panel)
 		panel->bl_config.type = DSI_BACKLIGHT_UNKNOWN;
 	}
 
-	data = utils->get_property(utils->data, "qcom,bl-update-flag", NULL);
+    panel->bl_config.dcs_type_ss_ea =
+            utils->read_bool(utils->data, "qcom,mdss-dsi-bl-dcs-type-ss-ea");
+
+    panel->bl_config.dcs_type_ss_eb =
+            utils->read_bool(utils->data, "qcom,mdss-dsi-bl-dcs-type-ss-eb");
+
+    data = utils->get_property(utils->data, "qcom,bl-update-flag", NULL);
 	if (!data) {
 		panel->bl_config.bl_update = BL_UPDATE_NONE;
 	} else if (!strcmp(data, "delay_until_first_frame")) {
