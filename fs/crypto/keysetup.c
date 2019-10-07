@@ -44,6 +44,12 @@ struct fscrypt_mode fscrypt_modes[] = {
 		.keysize = 32,
 		.ivsize = 32,
 	},
+	[FSCRYPT_MODE_PRIVATE] = {
+		.friendly_name = "Inline encryption (AES-256-XTS)",
+		.cipher_str = NULL,
+		.keysize = 64,
+		.ivsize = 16,
+	},
 };
 
 static DEFINE_MUTEX(fscrypt_mode_key_setup_mutex);
