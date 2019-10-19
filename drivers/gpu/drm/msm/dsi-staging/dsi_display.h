@@ -725,4 +725,6 @@ void dsi_display_set_fod_ui(struct dsi_display *display, bool status);
  */
 void dsi_display_set_idle_hint(void *display, bool is_idle);
 
+char *dsi_display_get_cmdline_panel_info(void);
+
 #endif /* _DSI_DISPLAY_H_ */
