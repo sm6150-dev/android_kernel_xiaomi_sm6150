@@ -19,10 +19,13 @@
 #include "sde_encoder.h"
 #include <linux/backlight.h>
 #include <linux/string.h>
+#include <linux/msm_drm_notify.h>
 #include "dsi_drm.h"
 #include "dsi_display.h"
 #include "sde_crtc.h"
 #include "sde_rm.h"
+#include "dsi_panel.h"
+#include "sde_trace.h"
 
 #define BL_NODE_NAME_SIZE 32
 
@@ -85,9 +88,12 @@ static int sde_backlight_device_update_status(struct backlight_device *bd)
 	if (brightness > display->panel->bl_config.bl_max_level)
 		brightness = display->panel->bl_config.bl_max_level;
 
-	/* map UI brightness into driver backlight level with rounding */
-	bl_lvl = mult_frac(brightness, display->panel->bl_config.bl_max_level,
-			display->panel->bl_config.brightness_max_level);
+	if (!display->panel->bl_config.bl_remap_flag) {
+		/* map UI brightness into driver backlight level with rounding */
+		bl_lvl = mult_frac(brightness, display->panel->bl_config.bl_max_level,
+				display->panel->bl_config.brightness_max_level);
+	} else
+		bl_lvl = brightness;
 
 	if (!bl_lvl && brightness)
 		bl_lvl = 1;
@@ -106,6 +112,7 @@ static int sde_backlight_device_update_status(struct backlight_device *bd)
 		rc = c_conn->ops.set_backlight(&c_conn->base,
 				c_conn->display, bl_lvl);
 		c_conn->unset_bl_level = 0;
+		c_conn->mi_dimlayer_state.current_backlight = bl_lvl;
 	}
 
 	return rc;
@@ -418,6 +425,7 @@ static int _sde_connector_update_power_locked(struct sde_connector *c_conn)
 	switch (c_conn->dpms_mode) {
 	case DRM_MODE_DPMS_ON:
 		mode = c_conn->lp_mode;
+		c_conn->fod_frame_count = 0;
 		break;
 	case DRM_MODE_DPMS_STANDBY:
 		mode = SDE_MODE_DPMS_STANDBY;
@@ -617,6 +625,9 @@ int sde_connector_pre_kickoff(struct drm_connector *connector)
 	params.hdr_meta = &c_state->hdr_meta;
 
 	SDE_EVT32_VERBOSE(connector->base.id);
+
+	/* fingerprint hbm fence */
+	_sde_connector_mi_dimlayer_hbm_fence(connector);
 
 	rc = c_conn->ops.pre_kickoff(connector, c_conn->display, &params);
 

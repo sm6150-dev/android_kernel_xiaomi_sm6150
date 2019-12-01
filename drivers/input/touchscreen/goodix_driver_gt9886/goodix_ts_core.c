@@ -1676,6 +1676,9 @@ int goodix_ts_msm_drm_notifier_callback(struct notifier_block *self,
 				return 0;
 			ts_info("touchpanel suspend by %s", blank == MSM_DRM_BLANK_POWERDOWN ? "blank" : "doze");
 			queue_work(core_data->event_wq, &core_data->suspend_work);
+		} else if (event == MSM_DRM_EVENT_FOD && blank == FOD_FINGERDOWN) {
+			input_report_key(core_data->input_dev, BTN_INFO, 1);
+			ts_info("Pig: fod yes");
 		} else if (event == MSM_DRM_EVENT_BLANK && blank == MSM_DRM_BLANK_UNBLANK) {
 			ts_info("core_data->suspend_stat = %d\n", atomic_read(&core_data->suspend_stat));
 			ts_info("touchpanel resume");

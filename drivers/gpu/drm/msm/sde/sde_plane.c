@@ -4354,6 +4354,18 @@ void sde_plane_restore(struct drm_plane *plane)
 	sde_plane_atomic_update(plane, plane->state);
 }
 
+uint32_t sde_plane_get_mi_layer_info(const struct drm_plane_state *drm_state)
+{
+	struct sde_plane_state *pstate;
+
+	if (!drm_state)
+		return 0;
+
+	pstate = to_sde_plane_state(drm_state);
+
+	return sde_plane_get_property(pstate, PLANE_PROP_MI_LAYER_INFO);
+}
+
 /* helper to install properties which are common to planes and crtcs */
 static void _sde_plane_install_properties(struct drm_plane *plane,
 	struct sde_mdss_cfg *catalog, u32 master_plane_id)
@@ -4414,6 +4426,9 @@ static void _sde_plane_install_properties(struct drm_plane *plane,
 		/* reserve zpos == 0 for primary planes */
 		zpos_def = drm_plane_index(plane) + 1;
 	}
+
+	msm_property_install_range(&psde->property_info, "mi_layer_info",
+		0x0, 0, U32_MAX, 0, PLANE_PROP_MI_LAYER_INFO);
 
 	msm_property_install_range(&psde->property_info, "zpos",
 		0x0, 0, zpos_max, zpos_def, PLANE_PROP_ZPOS);

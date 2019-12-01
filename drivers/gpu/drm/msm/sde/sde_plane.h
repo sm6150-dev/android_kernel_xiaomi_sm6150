@@ -398,4 +398,10 @@ void sde_plane_clear_ubwc_error(struct drm_plane *plane);
 void sde_plane_setup_src_split_order(struct drm_plane *plane,
 		enum sde_sspp_multirect_index rect_mode, bool enable);
 
+/*
+ * sde_plane_get_mi_layer_info - get mi layer info
+ * @plane: Pointer to DRM plane object
+ */
+uint32_t sde_plane_get_mi_layer_info(const struct drm_plane_state *drm_state);
+
 #endif /* _SDE_PLANE_H_ */

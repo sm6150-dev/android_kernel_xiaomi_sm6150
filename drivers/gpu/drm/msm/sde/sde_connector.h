@@ -23,6 +23,8 @@
 #include "sde_kms.h"
 #include "sde_fence.h"
 
+#include "sde_fod_dim_layer.h"
+
 #define SDE_CONNECTOR_NAME_SIZE	16
 
 struct sde_connector;
@@ -392,6 +394,7 @@ struct sde_connector_evt {
  * @qsync_updated: Qsync settings were updated
  * last_cmd_tx_sts: status of the last command transfer
  * @hdr_capable: external hdr support present
+ * @mi_dimlayer_state: mi dimlayer state
  */
 struct sde_connector {
 	struct drm_connector base;
@@ -444,6 +447,9 @@ struct sde_connector {
 
 	bool last_cmd_tx_sts;
 	bool hdr_capable;
+
+	struct mi_dimlayer_state mi_dimlayer_state;
+	u32 fod_frame_count;
 };
 
 /**

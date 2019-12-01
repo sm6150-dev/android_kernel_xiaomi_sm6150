@@ -28,6 +28,8 @@
 #include "sde_hw_blk.h"
 #include "sde_hw_ds.h"
 
+#include "sde_fod_dim_layer.h"
+
 #define SDE_CRTC_NAME_SIZE	12
 
 /* define the maximum number of in-flight frame events */
@@ -305,6 +307,7 @@ struct sde_crtc {
 
 	/* blob for histogram data */
 	struct drm_property_blob *hist_blob;
+	bool is_primary_sde_crtc;
 };
 
 #define to_sde_crtc(x) container_of(x, struct sde_crtc, base)
@@ -398,6 +401,7 @@ struct sde_crtc_respool {
  * @padding_height: panel height after line padding
  * @padding_active: active lines in panel stacking pattern
  * @padding_dummy: dummy lines in panel stacking pattern
+ * @mi_state: Mi part of crtc state
  */
 struct sde_crtc_state {
 	struct drm_crtc_state base;
@@ -437,6 +441,9 @@ struct sde_crtc_state {
 	u32 padding_dummy;
 
 	struct sde_crtc_respool rp;
+
+	struct sde_crtc_mi_state mi_state;
+	uint32_t num_dim_layers_bank;
 };
 
 enum sde_crtc_irq_state {
@@ -858,5 +865,24 @@ int sde_crtc_calc_vpadding_param(struct drm_crtc_state *state,
  */
 int sde_crtc_get_num_datapath(struct drm_crtc *crtc,
 		struct drm_connector *connector);
+
+/**
+ * sde_crtc_mi_atomic_check - to do crtc mi atomic check
+ * @crtc: Pointer to sde crtc state structure
+ * @cstate: Pointer to sde crtc state structure
+ * @pstates: Pointer to sde plane state structure
+ * @cnt: plane refence count
+ */
+int sde_crtc_mi_atomic_check(struct sde_crtc *sde_crtc, struct sde_crtc_state *cstate,
+		void *pstates, int cnt);
+
+/**
+ * sde_crtc_mi_atomic_check - to do crtc mi atomic check
+ * @crtc: Pointer to sde crtc state structure
+ * @cstate: Pointer to sde crtc state structure
+ * @pstates: Pointer to sde plane state structure
+ * @cnt: plane refence count
+ */
+uint32_t sde_crtc_get_mi_fod_sync_info(struct sde_crtc_state *cstate);
 
 #endif /* _SDE_CRTC_H_ */
