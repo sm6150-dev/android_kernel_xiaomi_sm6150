@@ -16,6 +16,10 @@
 #define pr_fmt(fmt)	"dsi-drm:[%s] " fmt, __func__
 #include <drm/drm_atomic_helper.h>
 #include <drm/drm_atomic.h>
+#include <linux/msm_drm_notify.h>
+#include <linux/notifier.h>
+#include <drm/drm_bridge.h>
+#include <linux/pm_wakeup.h>
 
 #include "msm_kms.h"
 #include "sde_connector.h"
@@ -37,6 +41,10 @@ static struct dsi_display_mode_priv_info default_priv_info = {
 	.panel_prefill_lines = DEFAULT_PANEL_PREFILL_LINES,
 	.dsc_enabled = false,
 };
+
+struct dsi_bridge *gbridge;
+
+struct msm_drm_notifier g_notify_data;
 
 static void convert_to_dsi_mode(const struct drm_display_mode *drm_mode,
 				struct dsi_display_mode *dsi_mode)
@@ -172,6 +180,17 @@ static void dsi_bridge_pre_enable(struct drm_bridge *bridge)
 {
 	int rc = 0;
 	struct dsi_bridge *c_bridge = to_dsi_bridge(bridge);
+	struct drm_device *dev = bridge->dev;
+	int event = 0;
+
+	if (dev->doze_state == MSM_DRM_BLANK_POWERDOWN) {
+		dev->doze_state = MSM_DRM_BLANK_UNBLANK;
+		pr_info("%s power on from power off\n", __func__);
+	}
+
+	event = dev->doze_state;
+
+	g_notify_data.data = &event;
 
 	if (!bridge) {
 		pr_err("Invalid params\n");
@@ -182,6 +201,10 @@ static void dsi_bridge_pre_enable(struct drm_bridge *bridge)
 		pr_err("Incorrect bridge details\n");
 		return;
 	}
+
+	atomic_set(&c_bridge->display->panel->esd_recovery_pending, 0);
+
+	msm_drm_notifier_call_chain(MSM_DRM_EARLY_EVENT_BLANK, &g_notify_data);
 
 	atomic_set(&c_bridge->display->panel->esd_recovery_pending, 0);
 
@@ -218,12 +241,67 @@ static void dsi_bridge_pre_enable(struct drm_bridge *bridge)
 				c_bridge->id, rc);
 		(void)dsi_display_unprepare(c_bridge->display);
 	}
+
+	msm_drm_notifier_call_chain(MSM_DRM_EVENT_BLANK, &g_notify_data);
+
 	SDE_ATRACE_END("dsi_display_enable");
 
 	rc = dsi_display_splash_res_cleanup(c_bridge->display);
 	if (rc)
 		pr_err("Continuous splash pipeline cleanup failed, rc=%d\n",
 									rc);
+}
+
+int panel_disp_param_send(struct dsi_display *display, int cmd);
+static void dsi_bridge_disp_param_set(struct drm_bridge *bridge, int cmd)
+{
+	int rc = 0;
+	struct dsi_bridge *c_bridge;
+
+	if (!bridge) {
+		pr_err("Invalid params\n");
+		return;
+	}
+
+	c_bridge = to_dsi_bridge(bridge);
+
+	SDE_ATRACE_BEGIN("panel_disp_param_send");
+	rc = panel_disp_param_send(c_bridge->display, cmd);
+	if (rc) {
+		pr_err("[%d] DSI disp param send failed, rc=%d\n",
+		       c_bridge->id, rc);
+	}
+	SDE_ATRACE_END("panel_disp_param_send");
+}
+
+static ssize_t dsi_bridge_disp_param_get(struct drm_bridge *bridge, char *buf)
+{
+	struct dsi_bridge *c_bridge;
+	struct dsi_display *display;
+	struct dsi_panel *panel;
+	ssize_t ret = 0;
+
+	if (!bridge) {
+		pr_err("Invalid params\n");
+		return 0;
+	} else {
+		SDE_ATRACE_BEGIN("panel_disp_param_get");
+		c_bridge = to_dsi_bridge(bridge);
+		if(c_bridge == NULL)
+			return 0;
+		display = c_bridge->display;
+		if(display == NULL)
+			return 0;
+		panel = display->panel;
+		if (panel) {
+			ret = strlen(panel->panel_read_data);
+			ret = ret > 255 ? 255 : ret;
+			if (ret > 0)
+				memcpy(buf, panel->panel_read_data, ret);
+		}
+		SDE_ATRACE_END("panel_disp_param_get");
+	}
+	return ret;
 }
 
 static void dsi_bridge_enable(struct drm_bridge *bridge)
@@ -294,11 +372,24 @@ static void dsi_bridge_post_disable(struct drm_bridge *bridge)
 {
 	int rc = 0;
 	struct dsi_bridge *c_bridge = to_dsi_bridge(bridge);
+	struct drm_device *dev = bridge->dev;
+	int event = 0;
+
+	if (dev->doze_state == MSM_DRM_BLANK_UNBLANK) {
+		dev->doze_state = MSM_DRM_BLANK_POWERDOWN;
+		pr_info("%s wrong doze state\n", __func__);
+	}
+
+	event = dev->doze_state;
+
+	g_notify_data.data = &event;
 
 	if (!bridge) {
 		pr_err("Invalid params\n");
 		return;
 	}
+
+	msm_drm_notifier_call_chain(MSM_DRM_EARLY_EVENT_BLANK, &g_notify_data);
 
 	SDE_ATRACE_BEGIN("dsi_bridge_post_disable");
 	SDE_ATRACE_BEGIN("dsi_display_disable");
@@ -319,6 +410,9 @@ static void dsi_bridge_post_disable(struct drm_bridge *bridge)
 		return;
 	}
 	SDE_ATRACE_END("dsi_bridge_post_disable");
+
+	msm_drm_notifier_call_chain(MSM_DRM_EVENT_BLANK, &g_notify_data);
+
 }
 
 static void dsi_bridge_mode_set(struct drm_bridge *bridge,
@@ -547,6 +641,8 @@ static const struct drm_bridge_funcs dsi_bridge_ops = {
 	.disable      = dsi_bridge_disable,
 	.post_disable = dsi_bridge_post_disable,
 	.mode_set     = dsi_bridge_mode_set,
+	.disp_param_set = dsi_bridge_disp_param_set,
+	.disp_param_get = dsi_bridge_disp_param_get,
 };
 
 int dsi_conn_set_info_blob(struct drm_connector *connector,
@@ -1054,6 +1150,7 @@ struct dsi_bridge *dsi_drm_bridge_init(struct dsi_display *display,
 	}
 
 	encoder->bridge = &bridge->base;
+
 	return bridge;
 error_free_bridge:
 	kfree(bridge);

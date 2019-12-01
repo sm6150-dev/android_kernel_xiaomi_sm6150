@@ -354,8 +354,36 @@ void drm_bridge_pre_enable(struct drm_bridge *bridge)
 
 	if (bridge->funcs->pre_enable)
 		bridge->funcs->pre_enable(bridge);
+
 }
 EXPORT_SYMBOL(drm_bridge_pre_enable);
+
+void drm_bridge_disp_param_set(struct drm_bridge *bridge, int cmd)
+{
+	if (!bridge)
+		return;
+
+	drm_bridge_disp_param_set(bridge->next, cmd);
+
+	if (bridge->funcs->disp_param_set)
+		bridge->funcs->disp_param_set(bridge, cmd);
+}
+EXPORT_SYMBOL(drm_bridge_disp_param_set);
+
+ssize_t drm_bridge_disp_param_get(struct drm_bridge *bridge, char *pbuf)
+{
+	ssize_t ret = 0;
+
+	if (!bridge)
+		return 0;
+
+	ret = drm_bridge_disp_param_get(bridge->next, pbuf);
+
+	if (bridge->funcs->disp_param_get)
+		ret = bridge->funcs->disp_param_get(bridge, pbuf);
+	return ret;
+}
+EXPORT_SYMBOL(drm_bridge_disp_param_get);
 
 /**
  * drm_bridge_enable - enables all bridges in the encoder chain
