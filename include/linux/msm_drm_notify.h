@@ -19,12 +19,18 @@
 #define MSM_DRM_EVENT_BLANK			0x01
 /* A hardware display blank early change occurred */
 #define MSM_DRM_EARLY_EVENT_BLANK		0x02
+/* A hardware display blank change occurred */
+#define MSM_DRM_EVENT_FOD			0x04
 
 enum {
 	/* panel: power on */
 	MSM_DRM_BLANK_UNBLANK,
 	/* panel: power off */
 	MSM_DRM_BLANK_POWERDOWN,
+  /* panel: low power mode 1 */
+	MSM_DRM_BLANK_LP1,
+  /* panel: low power mode 2 */
+	MSM_DRM_BLANK_LP2,
 };
 
 enum msm_drm_display_id {
@@ -35,11 +41,18 @@ enum msm_drm_display_id {
 	MSM_DRM_DISPLAY_MAX
 };
 
+enum {
+	FOD_FINGERDOWN = 0,
+	FOD_FINGERUP,
+};
+
 struct msm_drm_notifier {
 	enum msm_drm_display_id id;
 	void *data;
+	bool is_primary;
 };
 
 int msm_drm_register_client(struct notifier_block *nb);
 int msm_drm_unregister_client(struct notifier_block *nb);
+int msm_drm_notifier_call_chain(unsigned long val, void *v);
 #endif
