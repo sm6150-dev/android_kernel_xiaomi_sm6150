@@ -624,11 +624,14 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 
 	dsi = &panel->mipi_device;
 
-    if (panel->bl_config.dcs_type_ss_ea || panel->bl_config.dcs_type_ss_eb)
+    if (panel->bl_config.dcs_type_ss_ea || panel->bl_config.dcs_type_ss_eb) {
+        if (bl_lvl == 0) {
+         dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_DIMMINGOFF);
+        }
         rc = mipi_dsi_dcs_set_display_brightness_ss(dsi, bl_lvl);
-    else
+    } else {
         rc = mipi_dsi_dcs_set_display_brightness(dsi, bl_lvl);
-
+    }
     if (rc < 0) pr_err("failed to update dcs backlight:%d\n", bl_lvl);
 
     return rc;
@@ -857,6 +860,10 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 		return 0;
 
 	pr_debug("backlight type:%d lvl:%d\n", bl->type, bl_lvl);
+
+	if (bl_lvl == 0)
+		dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_DIMMINGOFF);
+
 	switch (bl->type) {
 	case DSI_BACKLIGHT_WLED:
 		rc = backlight_device_set_brightness(bl->raw_bd, bl_lvl);
@@ -1919,6 +1926,7 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-dispparam-hbm-fod-off-command",
 	"qcom,mdss-dsi-dispparam-elvss-dimming-offset-command",
 	"qcom,mdss-dsi-dispparam-elvss-dimming-read-command",
+	"qcom,mdss-dsi-dispparam-dimmingoff-command",
 };
 
 const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
@@ -1951,6 +1959,7 @@ const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-dispparam-hbm-fod-off-command-state",
 	"qcom,mdss-dsi-dispparam-elvss-dimming-offset-command-state",
 	"qcom,mdss-dsi-dispparam-elvss-dimming-read-command-state",
+	"qcom,mdss-dsi-dispparam-dimmingoff-command-state",
 };
 
 static int dsi_panel_get_cmd_pkt_count(const char *data, u32 length, u32 *cnt)
