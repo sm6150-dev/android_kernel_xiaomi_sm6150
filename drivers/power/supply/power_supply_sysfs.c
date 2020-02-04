@@ -164,6 +164,9 @@ static ssize_t power_supply_show_property(struct device *dev,
 
 	if (off == POWER_SUPPLY_PROP_CHARGE_COUNTER_EXT)
 		return sprintf(buf, "%lld\n", value.int64val);
+	else if (off == POWER_SUPPLY_PROP_TYPE_RECHECK)
+		return scnprintf(buf, PAGE_SIZE, "0x%x\n",
+				value.intval);
 	else
 		return sprintf(buf, "%d\n", value.intval);
 }
@@ -410,6 +413,7 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(skin_health),
 	POWER_SUPPLY_ATTR(apsd_rerun),
 	POWER_SUPPLY_ATTR(apsd_timeout),
+	POWER_SUPPLY_ATTR(type_recheck),
 	/* Charge pump properties */
 	POWER_SUPPLY_ATTR(cp_status1),
 	POWER_SUPPLY_ATTR(cp_status2),
