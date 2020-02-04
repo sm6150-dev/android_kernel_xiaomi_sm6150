@@ -4295,6 +4295,32 @@ int smblib_set_prop_usb_voltage_max_limit(struct smb_charger *chg,
 	return 0;
 }
 
+int smblib_get_prop_type_recheck(struct smb_charger *chg,
+				    union power_supply_propval *val)
+{
+	int status = 0;
+
+	if (chg->recheck_charger)
+		status |= BIT(0) << 8;
+
+	status |= chg->precheck_charger_type << 4;
+	status |= chg->real_charger_type;
+
+	val->intval = status;
+
+	return 0;
+}
+
+int smblib_set_prop_type_recheck(struct smb_charger *chg,
+				    const union power_supply_propval *val)
+{
+	if (val->intval == 0) {
+		cancel_delayed_work_sync(&chg->charger_type_recheck);
+		chg->recheck_charger = false;
+	}
+	return 0;
+}
+
 static void smblib_typec_irq_config(struct smb_charger *chg, bool en)
 {
 	if (en == chg->typec_irq_en)
@@ -5257,6 +5283,10 @@ void smblib_usb_plugin_hard_reset_locked(struct smb_charger *chg)
 			}
 		}
 
+		cancel_delayed_work_sync(&chg->charger_type_recheck);
+		chg->recheck_charger = false;
+		chg->precheck_charger_type = POWER_SUPPLY_TYPE_UNKNOWN;
+
 		/* Force 1500mA FCC on USB removal if fcc stepper is enabled */
 		if (chg->fcc_stepper_enable)
 			vote(chg->fcc_votable, FCC_STEPPER_VOTER,
@@ -5308,7 +5338,10 @@ void smblib_usb_plugin_locked(struct smb_charger *chg)
 		vote(chg->awake_votable, PL_DELAY_VOTER, true, 0);
 		schedule_delayed_work(&chg->pl_enable_work,
 					msecs_to_jiffies(PL_DELAY_MS));
+		schedule_delayed_work(&chg->charger_type_recheck,
+					msecs_to_jiffies(CHARGER_RECHECK_DELAY_MS));
 	} else {
+		cancel_delayed_work_sync(&chg->charger_type_recheck);
 		/* Disable SW Thermal Regulation */
 		rc = smblib_set_sw_thermal_regulation(chg, false);
 		if (rc < 0)
@@ -5363,6 +5396,10 @@ void smblib_usb_plugin_locked(struct smb_charger *chg)
 		rc = smblib_request_dpdm(chg, false);
 		if (rc < 0)
 			smblib_err(chg, "Couldn't disable DPDM rc=%d\n", rc);
+
+
+		chg->recheck_charger = false;
+		chg->precheck_charger_type = POWER_SUPPLY_TYPE_UNKNOWN;
 
 		smblib_update_usb_type(chg);
 	}
@@ -5967,6 +6004,7 @@ static void typec_src_removal(struct smb_charger *chg)
 		smblib_notify_device_mode(chg, false);
 
 	chg->typec_legacy = false;
+	chg->recheck_charger = false;
 
 	del_timer_sync(&chg->apsd_timer);
 	chg->apsd_ext_timeout = false;
@@ -7526,6 +7564,60 @@ static void smblib_dual_role_check_work(struct work_struct *work)
 	vote(chg->awake_votable, DR_SWAP_VOTER, false, 0);
 }
 
+static void smblib_charger_type_recheck(struct work_struct *work)
+{
+	struct smb_charger *chg = container_of(work, struct smb_charger,
+			charger_type_recheck.work);
+	int recheck_time = TYPE_RECHECK_TIME_5S;
+	static int last_charger_type, check_count;
+	int rc;
+
+	smblib_update_usb_type(chg);
+	smblib_dbg(chg, PR_OEM, "typec_mode:%d,last:%d: real charger type:%d\n",
+			chg->typec_mode, last_charger_type, chg->real_charger_type);
+
+	if (last_charger_type != chg->real_charger_type)
+		check_count--;
+	last_charger_type = chg->real_charger_type;
+
+	if (chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP)
+		power_supply_changed(chg->usb_psy);
+
+	if (chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP_3 ||
+			chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP ||
+			chg->pd_active || (check_count >= TYPE_RECHECK_COUNT) ||
+			((chg->real_charger_type == POWER_SUPPLY_TYPE_USB_FLOAT) &&
+				(chg->typec_mode == POWER_SUPPLY_TYPEC_SINK_AUDIO_ADAPTER))) {
+		smblib_dbg(chg, PR_OEM, "hvdcp detect or check_count = %d break\n",
+				check_count);
+		check_count = 0;
+		return;
+	}
+
+	if (smblib_get_prop_dfp_mode(chg) != POWER_SUPPLY_TYPEC_NONE)
+		goto check_next;
+
+	if (!chg->recheck_charger)
+		chg->precheck_charger_type = chg->real_charger_type;
+	chg->recheck_charger = true;
+
+	/* need request hsusb phy dpdm to false then true for float charger */
+	if (chg->real_charger_type == POWER_SUPPLY_TYPE_USB_FLOAT) {
+		rc = smblib_request_dpdm(chg, false);
+		if (rc < 0)
+			smblib_err(chg, "Couldn't disable DPDM rc=%d\n", rc);
+
+		msleep(500);
+	}
+
+	smblib_rerun_apsd_if_required(chg);
+
+check_next:
+	check_count++;
+	schedule_delayed_work(&chg->charger_type_recheck,
+				msecs_to_jiffies(recheck_time));
+}
+
 static int smblib_create_votables(struct smb_charger *chg)
 {
 	int rc = 0;
@@ -7719,6 +7811,7 @@ int smblib_init(struct smb_charger *chg)
 					smblib_pr_swap_detach_work);
 	INIT_DELAYED_WORK(&chg->pr_lock_clear_work,
 					smblib_pr_lock_clear_work);
+	INIT_DELAYED_WORK(&chg->charger_type_recheck, smblib_charger_type_recheck);
 	setup_timer(&chg->apsd_timer, apsd_timer_cb, (unsigned long)chg);
 
 	if (chg->wa_flags & CHG_TERMINATION_WA) {
@@ -7873,6 +7966,7 @@ int smblib_deinit(struct smb_charger *chg)
 		cancel_delayed_work_sync(&chg->usbov_dbc_work);
 		cancel_delayed_work_sync(&chg->role_reversal_check);
 		cancel_delayed_work_sync(&chg->pr_swap_detach_work);
+		cancel_delayed_work_sync(&chg->charger_type_recheck);
 		power_supply_unreg_notifier(&chg->nb);
 		smblib_destroy_votables(chg);
 		qcom_step_chg_deinit();
