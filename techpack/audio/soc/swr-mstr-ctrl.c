@@ -1918,7 +1918,7 @@ static int swrm_probe(struct platform_device *pdev)
 		goto err_pdata_fail;
 	}
 
-#if (defined CONFIG_MACH_XIAOMI_F10) || (defined CONFIG_MACH_XIAOMI_G7B)
+#ifdef CONFIG_MACH_XIAOMI_SDMMAGPIE
 	swrm->swr_tx_wakeup_capable = false;
 	if (of_property_read_bool(swrm->dev->of_node,
 			"qcom,swr-mstr-tx-wakeup-capable")) {
@@ -2068,7 +2068,7 @@ static int swrm_probe(struct platform_device *pdev)
 				   (void *) "swrm_reg_dump",
 				   &swrm_debug_ops);
 	}
-#if (defined CONFIG_MACH_XIAOMI_F10) || (defined CONFIG_MACH_XIAOMI_G7B)
+#ifdef CONFIG_MACH_XIAOMI_SDMMAGPIE
 	if (swrm->master_id == MASTER_ID_TX)
 		irq_set_irq_wake(swrm->irq, 1);
 #endif
@@ -2099,7 +2099,7 @@ err_mstr_fail:
 	else if (swrm->irq)
 		free_irq(swrm->irq, swrm);
 err_irq_fail:
-#if (defined CONFIG_MACH_XIAOMI_F10) || (defined CONFIG_MACH_XIAOMI_G7B)
+#ifdef CONFIG_MACH_XIAOMI_SDMMAGPIE
 	device_init_wakeup(swrm->dev, false);
 #endif
 	mutex_destroy(&swrm->irq_lock);

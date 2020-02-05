@@ -2902,7 +2902,7 @@ int adm_open(int port_id, int path, int rate, int channel_mode, int topology,
 	}
 
 	if ((topology == VPM_TX_SM_ECNS_V2_COPP_TOPOLOGY) ||
-#if (defined CONFIG_MACH_XIAOMI_F10) || (defined CONFIG_MACH_XIAOMI_G7B)
+#ifdef CONFIG_MACH_XIAOMI_SDMMAGPIE
 	    (topology == VPM_TX_DM_FLUENCE_COPP_TOPOLOGY) ||
 	    (topology == VPM_TX_DM_RFECNS_COPP_TOPOLOGY) ||
 #endif
@@ -2927,7 +2927,7 @@ int adm_open(int port_id, int path, int rate, int channel_mode, int topology,
 				this_adm.ffecns_port_id);
 	}
 
-#if (defined CONFIG_MACH_XIAOMI_F10) || (defined CONFIG_MACH_XIAOMI_G7B)
+#ifdef CONFIG_MACH_XIAOMI_SDMMAGPIE
 	if (topology == VPM_TX_VOICE_SMECNS_V2_COPP_TOPOLOGY ||
 		topology == ADM_TOPOLOGY_ID_AUDIO_RX_FVSAM) {
 		pr_debug("%s: set channel_mode as 1 for topology=%d\n", __func__, topology);

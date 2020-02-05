@@ -483,7 +483,7 @@ static void lpi_gpio_dbg_show(struct seq_file *s, struct gpio_chip *chip)
 	unsigned int i;
 
 	for (i = 0; i < chip->ngpio; i++, gpio++) {
-#if (defined CONFIG_MACH_XIAOMI_F10) || (defined CONFIG_MACH_XIAOMI_G7B)
+#ifdef CONFIG_MACH_XIAOMI_SDMMAGPIE
 		if (i < 8 || (i > 11 && i < 18)) continue;
 #endif
 		lpi_gpio_dbg_show_one(s, NULL, chip, i, gpio);

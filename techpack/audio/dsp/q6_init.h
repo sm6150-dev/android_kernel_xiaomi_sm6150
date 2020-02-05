@@ -30,7 +30,7 @@ int avtimer_init(void);
 int msm_mdf_init(void);
 void msm_mdf_exit(void);
 #else
-#if (defined CONFIG_MACH_XIAOMI_F10) || (defined CONFIG_MACH_XIAOMI_G7B)
+#ifdef CONFIG_MACH_XIAOMI_SDMMAGPIE
 int elliptic_driver_init(void);
 #endif
 static inline int msm_mdf_init(void)
@@ -68,7 +68,7 @@ void q6asm_exit(void);
 void afe_exit(void);
 void adm_exit(void);
 void adsp_err_exit(void);
-#if (defined CONFIG_MACH_XIAOMI_F10) || (defined CONFIG_MACH_XIAOMI_G7B)
+#ifdef CONFIG_MACH_XIAOMI_SDMMAGPIE
 int elliptic_driver_exit(void);
 #endif
 
