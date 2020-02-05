@@ -133,4 +133,10 @@ config SMB1398_CHARGER
 	      wireless charger receiver and provide the input for downstream
 	      chargers.
 
+config XIAOMI_CHARGE_THERMAL
+	bool "Xiaomi charge thermal"
+  default y
+	help
+    Say Y to include support for Xiaomi charge thermal.
+
 endmenu
