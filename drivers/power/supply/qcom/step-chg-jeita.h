@@ -13,7 +13,15 @@
 #ifndef __STEP_CHG_H__
 #define __STEP_CHG_H__
 
-#define MAX_STEP_CHG_ENTRIES	8
+#define MAX_STEP_CHG_ENTRIES	5
+
+#define BATT_CP_COOL_THRESHOLD		100
+#define BATT_CP_WARM_THRESHOLD		450
+
+#define BATT_COOL_THRESHOLD		150
+#define BATT_WARM_THRESHOLD		450
+
+#define HVDCP3_CLASS_B_27W		2
 
 struct step_chg_jeita_param {
 	u32			psy_prop;
