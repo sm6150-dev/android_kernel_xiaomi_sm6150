@@ -53,6 +53,10 @@
     qcom,mdss-dsi-t-clk-pre = <0x37>;
 
     qcom,mdss-dsi-panel-fod-dimlayer-enabled;
+
+		qcom,disp-doze-lpm-backlight = <20>;
+		qcom,disp-doze-hbm-backlight = <266>;
+
     qcom,mdss-dsi-display-timings {
         timing@0{
             qcom,mdss-dsi-panel-phy-timings = [00 24 0A 0A 26 25 09
@@ -71,6 +75,9 @@
     qcom,mdss-dsi-mode-sel-gpio-state = "single_port";
     qcom,platform-te-gpio = <&tlmm 10 0>;
     qcom,platform-reset-gpio = <&pm6150l_gpios 9 0>;
+
+		qcom,disp-doze-lpm-backlight = <20>;
+		qcom,disp-doze-hbm-backlight = <266>;
 
     qcom,mdss-dsi-t-clk-post = <0x0F>;
     qcom,mdss-dsi-t-clk-pre = <0x37>;
