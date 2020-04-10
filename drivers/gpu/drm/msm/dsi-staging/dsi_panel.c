@@ -3449,14 +3449,14 @@ int dsi_panel_parse_elvss_dimming_read_configs(struct dsi_panel *panel)
 	if (!elvss_dimming_cmds)
 		return -EINVAL;
 
-	dsi_panel_parse_cmd_sets_sub(&panel->elvss_dimming_offset,
+	dsi_panel_parse_cmd_sets_dt(&panel->elvss_dimming_offset,
 				DSI_CMD_SET_ELVSS_DIMMING_OFFSET, utils);
 	if (!panel->elvss_dimming_offset.count) {
 		pr_err("elvss dimming offset command parsing failed\n");
 		return -EINVAL;
 	}
 
-	dsi_panel_parse_cmd_sets_sub(&elvss_dimming_cmds->read_cmd,
+	dsi_panel_parse_cmd_sets_dt(&elvss_dimming_cmds->read_cmd,
 				DSI_CMD_SET_ELVSS_DIMMING_READ, utils);
 	if (!elvss_dimming_cmds->read_cmd.count) {
 		pr_err("elvss dimming command parsing failed\n");
@@ -3472,14 +3472,14 @@ int dsi_panel_parse_elvss_dimming_read_configs(struct dsi_panel *panel)
 
 	elvss_dimming_cmds->enabled = true;
 
-	dsi_panel_parse_cmd_sets_sub(&panel->hbm_fod_on,
+	dsi_panel_parse_cmd_sets_dt(&panel->hbm_fod_on,
 				DSI_CMD_SET_DISP_HBM_FOD_ON, utils);
 	if (!panel->hbm_fod_on.count) {
 		pr_err("hbm fod on command parsing failed\n");
 		return -EINVAL;
 	}
 
-	dsi_panel_parse_cmd_sets_sub(&panel->hbm_fod_off,
+	dsi_panel_parse_cmd_sets_dt(&panel->hbm_fod_off,
 				DSI_CMD_SET_DISP_HBM_FOD_OFF, utils);
 	if (!panel->hbm_fod_off.count) {
 		pr_err("hbm fod off command parsing failed\n");
