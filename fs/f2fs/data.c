@@ -2085,12 +2085,15 @@ static int f2fs_read_single_page(struct inode *inode, struct page *page,
 					bool is_readahead)
 {
 	struct bio *bio = *bio_ret;
+	struct f2fs_sb_info *sbi = F2FS_I_SB(inode);
 	const unsigned blkbits = inode->i_blkbits;
 	const unsigned blocksize = 1 << blkbits;
 	sector_t block_in_file;
 	sector_t last_block;
 	sector_t last_block_in_file;
 	sector_t block_nr;
+	bool bio_encrypted;
+	u64 dun;
 	int ret = 0;
 
 	block_in_file = (sector_t)page_index(page);
@@ -2158,9 +2161,17 @@ zero_out:
 	if (bio && !page_is_mergeable(F2FS_I_SB(inode), bio,
 				*last_block_in_bio, block_nr)) {
 submit_and_realloc:
-		__submit_bio(F2FS_I_SB(inode), bio, DATA);
+		__f2fs_submit_read_bio(sbi, bio, DATA);
 		bio = NULL;
 	}
+
+	dun = PG_DUN(inode, page);
+	bio_encrypted = f2fs_may_encrypt_bio(inode, NULL);
+	if (!fscrypt_mergeable_bio(bio, dun, bio_encrypted, 0)) {
+		__f2fs_submit_read_bio(sbi, bio, DATA);
+		bio = NULL;
+	}
+
 	if (bio == NULL) {
 		bio = f2fs_grab_read_bio(inode, block_nr, nr_pages,
 				is_readahead ? REQ_RAHEAD : 0, page->index,
@@ -2188,7 +2199,7 @@ submit_and_realloc:
 	goto out;
 confused:
 	if (bio) {
-		__submit_bio(F2FS_I_SB(inode), bio, DATA);
+		__f2fs_submit_read_bio(sbi, bio, DATA);
 		bio = NULL;
 	}
 	unlock_page(page);
@@ -2311,6 +2322,8 @@ submit_and_realloc:
 				*bio_ret = NULL;
 				return ret;
 			}
+			if (bio_encrypted)
+				fscrypt_set_ice_dun(inode, bio, dun);
 		}
 
 		f2fs_wait_on_block_writeback(inode, blkaddr);
@@ -2360,6 +2373,7 @@ int f2fs_mpage_readpages(struct address_space *mapping,
 	struct bio *bio = NULL;
 	sector_t last_block_in_bio = 0;
 	struct inode *inode = mapping->host;
+	struct f2fs_sb_info *sbi = F2FS_I_SB(inode);
 	struct f2fs_map_blocks map;
 
 #ifdef CONFIG_F2FS_FS_COMPRESSION
@@ -2438,7 +2452,7 @@ submit_and_realloc:
 		dun = PG_DUN(inode, page);
 		bio_encrypted = f2fs_may_encrypt_bio(inode, NULL);
 		if (!fscrypt_mergeable_bio(bio, dun, bio_encrypted, 0)) {
-			__submit_bio(F2FS_I_SB(inode), bio, DATA);
+			__f2fs_submit_read_bio(sbi, bio, DATA);
 			bio = NULL;
 		}
 
@@ -2500,7 +2514,7 @@ next_page:
 	}
 	BUG_ON(pages && !list_empty(pages));
 	if (bio)
-		__submit_bio(F2FS_I_SB(inode), bio, DATA);
+		__f2fs_submit_read_bio(sbi, bio, DATA);
 	return pages ? 0 : ret;
 }
 
