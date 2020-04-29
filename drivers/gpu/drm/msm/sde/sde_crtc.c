@@ -5490,10 +5490,13 @@ static int sde_crtc_fod_atomic_check(struct sde_crtc_state *cstate,
 
 	for (plane_idx = 0; plane_idx < cnt; plane_idx++) {
 		fod_property_value = sde_plane_check_fod_layer(pstates[plane_idx].drm_pstate);
+    pr_err("Pig: Check FOD layer, fod_property_value is %d, plane_idx is %d\n", fod_property_value, plane_idx);
 		if (fod_property_value == 1) {
 			fod_icon_plane_idx = plane_idx;
+    pr_err("Pig: Check FOD layer, reason: fod_property_value is %d, plane_idx is %d\n", fod_property_value, plane_idx);
 		} else if (fod_property_value == 2) {
 			fod_press_plane_idx = plane_idx;
+    pr_err("Pig: Check FOD layer, reason: fod_property_value is %d, plane_idx is %d\n", fod_property_value, plane_idx);
 		}
 	}
 
