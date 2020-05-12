@@ -12,3 +12,17 @@
 #include "sm7150-davinci-thermal.dtsi"
 #include "sm7150-davinci-touchscreen-goodix.dtsi"
 #include "sm7150-davinci-usb.dtsi"
+
+&firmware {
+  android {
+    fstab {
+      product {
+        compatible = "android,product";
+        dev = "/dev/block/platform/soc/1d84000.ufshc/by-name/cust";
+        type = "ext4";
+        mnt_flags = "ro,noatime,nodev,barrier=1";
+        fsmgr_flags = "wait";
+      };
+    };
+  };
+};
