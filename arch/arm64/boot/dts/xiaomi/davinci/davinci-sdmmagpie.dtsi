@@ -16,6 +16,21 @@
 #include "davinci-sdmmagpie-pinctrl.dtsi"
 #include "davinci-sdmmagpie-touchscreen.dtsi"
 
+&firmware {
+    android {
+        fstab {
+            product {
+              compatible = "android,product";
+              dev = "/dev/block/platform/soc/1d84000.ufshc/by-name/cust";
+              type = "ext4";
+              mnt_flags = "ro,noatime,nodev,barrier=1";
+              fsmgr_flags = "wait";
+            };
+        };
+    };
+};
+
+
 &pm6150_vadc {
     pa_therm1 {
         reg = <ADC_AMUX_THM2_PU2>;
