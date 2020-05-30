@@ -385,19 +385,6 @@ ssize_t drm_bridge_disp_param_get(struct drm_bridge *bridge, char *pbuf)
 }
 EXPORT_SYMBOL(drm_bridge_disp_param_get);
 
-int drm_get_panel_info(struct drm_bridge *bridge, char *buf)
-{
-	int rc = 0;
-	if (!bridge)
-		return rc;
-
-	if (bridge->funcs->disp_get_panel_info)
-		return bridge->funcs->disp_get_panel_info(bridge, buf);
-
-	return rc;
-}
-EXPORT_SYMBOL(drm_get_panel_info);
-
 /**
  * drm_bridge_enable - enables all bridges in the encoder chain
  * @bridge: bridge control structure
