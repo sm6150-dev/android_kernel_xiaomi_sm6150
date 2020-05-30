@@ -23,6 +23,8 @@
 #include <drm/drmP.h>
 #include "drm_internal.h"
 
+#include "drm_internal_mi.h"
+
 #define to_drm_minor(d) dev_get_drvdata(d)
 #define to_drm_connector(d) dev_get_drvdata(d)
 
@@ -230,34 +232,12 @@ static ssize_t modes_show(struct device *device,
 	return written;
 }
 
-extern int drm_get_panel_info(struct drm_bridge *bridge, char *name);
 static ssize_t panel_info_show(struct device *device,
-			    struct device_attribute *attr,
+			   struct device_attribute *attr,
 			   char *buf)
 {
-	int written = 0;
-	char pname[128] = {0};
-	struct drm_connector *connector = NULL;
-	struct drm_encoder *encoder = NULL;
-	struct drm_bridge *bridge = NULL;
-
-	connector = to_drm_connector(device);
-	if (!connector)
-		return written;
-
-	encoder = connector->encoder;
-	if (!encoder)
-		return written;
-
-	bridge = encoder->bridge;
-	if (!bridge)
-		return written;
-
-	written = drm_get_panel_info(bridge, pname);
-	if (written)
-		return snprintf(buf, PAGE_SIZE, "panel_name=%s\n", pname);
-
-	return written;
+	struct drm_connector *connector = to_drm_connector(device);
+	return dsi_display_read_panel_info(connector, buf);
 }
 
 static ssize_t doze_brightness_show(struct device *device,
