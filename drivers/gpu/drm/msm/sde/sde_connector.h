@@ -350,6 +350,21 @@ struct sde_connector_evt {
 	void *usr;
 };
 
+enum mi_dimlayer_type {
+	MI_DIMLAYER_NULL = 0x0,
+	MI_DIMLAYER_FOD_HBM_OVERLAY = 0x1,
+	MI_DIMLAYER_FOD_ICON = 0x2,
+	MI_DIMLAYER_AOD = 0x4,
+	MI_FOD_UNLOCK_SUCCESS = 0x8,
+	MI_DIMLAYER_MAX,
+};
+
+struct mi_dimlayer_state
+{
+	enum mi_dimlayer_type mi_dimlayer_type;
+	uint32_t current_backlight;
+};
+
 /**
  * struct sde_connector - local sde connector structure
  * @base: Base drm connector structure
@@ -392,6 +407,7 @@ struct sde_connector_evt {
  * @qsync_updated: Qsync settings were updated
  * last_cmd_tx_sts: status of the last command transfer
  * @hdr_capable: external hdr support present
+ * @mi_dimlayer_state: mi dimlayer state
  */
 struct sde_connector {
 	struct drm_connector base;
@@ -444,6 +460,9 @@ struct sde_connector {
 
 	bool last_cmd_tx_sts;
 	bool hdr_capable;
+
+	struct mi_dimlayer_state mi_dimlayer_state;
+	u32 fod_frame_count;
 };
 
 /**
@@ -909,5 +928,8 @@ int sde_connector_get_panel_vfp(struct drm_connector *connector,
 int sde_connector_esd_status(struct drm_connector *connector);
 
 int sde_connector_update_hbm(struct sde_connector *c_conn);
+
+void sde_connector_mi_update_dimlayer_state(struct drm_connector *connector,
+	enum mi_dimlayer_type mi_dimlayer_type);
 
 #endif /* _SDE_CONNECTOR_H_ */

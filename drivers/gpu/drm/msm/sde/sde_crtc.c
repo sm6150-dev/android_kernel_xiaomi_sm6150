@@ -2863,6 +2863,14 @@ static void sde_crtc_frame_event_cb(void *data, u32 event)
 	kthread_queue_work(&priv->event_thread[crtc_id].worker, &fevent->work);
 }
 
+static void _sde_crtc_mi_update_state(struct sde_crtc_state *cstate, enum mi_dimlayer_type dimlayer_state)
+{
+	int i = 0;
+
+	for (i = 0; i < cstate->num_connectors; i++)
+		sde_connector_mi_update_dimlayer_state(cstate->connectors[i], dimlayer_state);
+}
+
 void sde_crtc_prepare_commit(struct drm_crtc *crtc,
 		struct drm_crtc_state *old_state)
 {
@@ -4507,6 +4515,7 @@ void sde_crtc_commit_kickoff(struct drm_crtc *crtc,
 	bool is_error, reset_req, recovery_events;
 	unsigned long flags;
 	enum sde_crtc_idle_pc_state idle_pc_state;
+	uint32_t fod_sync_info;
 
 	if (!crtc) {
 		SDE_ERROR("invalid argument\n");
@@ -4538,6 +4547,9 @@ void sde_crtc_commit_kickoff(struct drm_crtc *crtc,
 	is_error = _sde_crtc_prepare_for_kickoff_rot(dev, crtc);
 
 	idle_pc_state = sde_crtc_get_property(cstate, CRTC_PROP_IDLE_PC_STATE);
+
+	fod_sync_info = sde_crtc_get_mi_fod_sync_info(cstate);
+	_sde_crtc_mi_update_state(cstate, fod_sync_info);
 
 	list_for_each_entry(encoder, &dev->mode_config.encoder_list, head) {
 		struct sde_encoder_kickoff_params params = { 0 };
@@ -5943,6 +5955,10 @@ static void sde_crtc_install_properties(struct drm_crtc *crtc,
 		SDE_ERROR("failed to allocate info memory\n");
 		return;
 	}
+
+	/* mi properties */
+	msm_property_install_range(&sde_crtc->property_info, "mi_fod_sync_info",
+		0x0, 0, U32_MAX, 0, CRCT_PROP_MI_FOD_SYNC_INFO);
 
 	/* range properties */
 	msm_property_install_range(&sde_crtc->property_info,
@@ -7459,6 +7475,15 @@ static int sde_crtc_tp_event_handler(struct drm_crtc *crtc_drm,
 {
 	return 0;
 }
+
+uint32_t sde_crtc_get_mi_fod_sync_info(struct sde_crtc_state *cstate)
+{
+	if (!cstate)
+		return 0;
+
+	return sde_crtc_get_property(cstate, CRCT_PROP_MI_FOD_SYNC_INFO);;
+}
+
 /**
  * sde_crtc_update_cont_splash_settings - update mixer settings
  *	and initial clk during device bootup for cont_splash use case
