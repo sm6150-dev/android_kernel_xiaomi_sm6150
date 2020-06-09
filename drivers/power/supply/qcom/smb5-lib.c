@@ -6363,6 +6363,7 @@ void smblib_usb_plugin_hard_reset_locked(struct smb_charger *chg)
 		}
 
 		cancel_delayed_work_sync(&chg->charger_type_recheck);
+		chg->hvdcp_recheck_status = false;
 		chg->recheck_charger = false;
 		chg->precheck_charger_type = POWER_SUPPLY_TYPE_UNKNOWN;
 		if (chg->cc_un_compliant_detected) {
@@ -6516,6 +6517,7 @@ void smblib_usb_plugin_locked(struct smb_charger *chg)
 			chg->cc_un_compliant_detected = false;
 		}
 
+		chg->hvdcp_recheck_status = false;
 		chg->recheck_charger = false;
 		chg->precheck_charger_type = POWER_SUPPLY_TYPE_UNKNOWN;
 
@@ -6727,6 +6729,9 @@ int smblib_get_quick_charge_type(struct smb_charger *chg)
 
 	if (chg->is_qc_class_b)
 		return QUICK_CHARGE_FLASH;
+
+	if ((chg->real_charger_type == POWER_SUPPLY_TYPE_USB_DCP) && chg->hvdcp_recheck_status)
+		return QUICK_CHARGE_FAST;
 
 	while (adapter_cap[i].adap_type != 0) {
 		if (chg->real_charger_type == adapter_cap[i].adap_type) {
@@ -9121,6 +9126,9 @@ static void smblib_charger_type_recheck(struct work_struct *work)
 		chg->is_float_recheck = true;
 		msleep(500);
 	}
+
+	if (chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP)
+		chg->hvdcp_recheck_status = true;
 
 	smblib_rerun_apsd_if_required(chg);
 

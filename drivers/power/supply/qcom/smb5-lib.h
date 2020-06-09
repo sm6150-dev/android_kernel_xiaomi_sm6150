@@ -804,6 +804,7 @@ struct smb_charger {
 	bool		already_start_step_charge_work;
 	bool		bq_input_suspend;
 
+	bool		hvdcp_recheck_status;
 	bool		is_float_recheck;
 };
 
