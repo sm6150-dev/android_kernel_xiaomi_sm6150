@@ -39,7 +39,7 @@
 &sde_dsi {
     qcom,dsi-display-list =
         <&dsi_g7b_37_02_0a_video_display
-        &dsi_g7b_37_02_0b_video_display>;
+        &dsi_g7b_42_02_0b_video_display>;
 };
 
 &dsi_panel_pwr_supply {
