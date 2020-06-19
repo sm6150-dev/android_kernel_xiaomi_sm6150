@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm64 4.14.183 Kernel Configuration
+# Linux/arm64 4.14.184 Kernel Configuration
 #
 CONFIG_ARM64=y
 CONFIG_64BIT=y
@@ -1603,7 +1603,7 @@ CONFIG_BLK_DEV_DM=y
 CONFIG_DM_BUFIO=y
 # CONFIG_DM_DEBUG_BLOCK_MANAGER_LOCKING is not set
 CONFIG_DM_CRYPT=y
-# CONFIG_DM_DEFAULT_KEY is not set
+CONFIG_DM_DEFAULT_KEY=y
 # CONFIG_DM_SNAPSHOT is not set
 # CONFIG_DM_THIN_PROVISIONING is not set
 # CONFIG_DM_CACHE is not set
