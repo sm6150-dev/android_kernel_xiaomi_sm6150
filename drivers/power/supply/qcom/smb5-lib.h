@@ -92,6 +92,7 @@ enum print_reason {
 #define CLASSA_QC_FCC_VOTER		"CLASSA_QC_FCC_VOTER"
 #define QC_A_CP_ICL_MAX_VOTER	"QC_A_CP_ICL_MAX_VOTER"
 #define JEITA_VOTER				"JEITA_VOTER"
+#define HVDCP3_START_ICL_VOTER	"HVDCP3_START_ICL_VOTER"
 #define QC2_UNSUPPORTED_VOTER	"QC2_UNSUPPORTED_VOTER"
 #define ESR_WORK_VOTER			"ESR_WORK_VOTER"
 #define SLOWLY_CHARGING_VOTER	"SLOWLY_CHARGING_VOTER"
@@ -802,6 +803,8 @@ struct smb_charger {
 	bool		slowly_charging;
 	bool		already_start_step_charge_work;
 	bool		bq_input_suspend;
+
+	bool		is_float_recheck;
 };
 
 enum quick_charge_type {
