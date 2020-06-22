@@ -1377,6 +1377,10 @@ static void smblib_uusb_removal(struct smb_charger *chg)
 	if (chg->cp_disable_votable)
 		vote(chg->cp_disable_votable, SW_THERM_REGULATION_VOTER,
 								false, 0);
+	/* reconfigure allowed voltage for HVDCP */
+	rc = smblib_usb_pd_adapter_allowance_override(chg, CONTINUOUS);
+	if (rc < 0)
+		smblib_err(chg, "Couldn't set CONTINUOUS rc=%d\n", rc);
 
 	/* reset USBOV votes and cancel work */
 	cancel_delayed_work_sync(&chg->usbov_dbc_work);
@@ -6086,9 +6090,9 @@ unsuspend_input:
 		rc = smblib_force_vbus_voltage(chg, FORCE_5V_BIT);
 		if (rc < 0)
 			pr_err("Failed to force 5V\n");
-		rc = smblib_usb_pd_adapter_allowance_override(chg, !!chg->pd_active ? FORCE_5V : FORCE_NULL);
+		rc = smblib_usb_pd_adapter_allowance_override(chg, FORCE_5V);
 		if (rc < 0)
-			pr_err("Failed to set CONTINUOUS allowance to 5V\n");
+			pr_err("Failed to set adapter allowance to 5V\n");
 		rc = smblib_set_opt_switcher_freq(chg, chg->chg_freq.freq_5V);
 		if (rc < 0)
 			pr_err("Failed to set chg_freq.freq_5V\n");
@@ -9079,8 +9083,10 @@ static void smblib_charger_type_recheck(struct work_struct *work)
 	if (chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP)
 		power_supply_changed(chg->usb_psy);
 
-	if (chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP_3 ||
+	if (chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP_3P5 ||
+		chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP_3 ||
 			chg->real_charger_type == POWER_SUPPLY_TYPE_USB_HVDCP ||
+			chg->real_charger_type == POWER_SUPPLY_TYPE_USB_CDP ||
 			chg->pd_active || (check_count >= TYPE_RECHECK_COUNT) ||
 			((chg->real_charger_type == POWER_SUPPLY_TYPE_USB_FLOAT) &&
 				(chg->typec_mode == POWER_SUPPLY_TYPEC_SINK_AUDIO_ADAPTER))) {
