@@ -175,7 +175,6 @@ struct nvt_ts_data {
 #endif
 	bool lkdown_readed;
 	int db_wakeup;
-	u8 lockdown_info[NVT_LOCKDOWN_SIZE];
 	uint32_t config_array_size;
 	struct nvt_config_info *config_array;
 	int panel_index;

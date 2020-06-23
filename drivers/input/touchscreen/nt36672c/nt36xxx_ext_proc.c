@@ -28,7 +28,6 @@
 #define NVT_RAW "nvt_raw"
 #define NVT_DIFF "nvt_diff"
 #define NVT_XIAOMI_CONFIG_INFO "nvt_xiaomi_config_info"
-#define NVT_XIAOMI_LOCKDOWN_INFO "tp_lockdown_info"
 #define NVT_POCKET_PALM_SWITCH "nvt_pocket_palm_switch"
 
 #define SPI_TANSFER_LENGTH  256
@@ -48,7 +47,6 @@ static struct proc_dir_entry *NVT_proc_baseline_entry;
 static struct proc_dir_entry *NVT_proc_raw_entry;
 static struct proc_dir_entry *NVT_proc_diff_entry;
 static struct proc_dir_entry *NVT_proc_xiaomi_config_info_entry;
-static struct proc_dir_entry *NVT_proc_xiaomi_lockdown_info_entry;
 static struct proc_dir_entry *NVT_proc_pocket_palm_switch_entry;
 
 // Xiaomi Config Info.
@@ -569,28 +567,6 @@ static const struct file_operations nvt_xiaomi_config_info_fops = {
 	.release = single_release,
 };
 
-static int nvt_xiaomi_lockdown_info_show(struct seq_file *m, void *v)
-{
-	u8 *lk = ts->lockdown_info;
-
-	seq_printf(m, "0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x\n",
-					lk[0], lk[1], lk[2], lk[3], lk[4], lk[5], lk[6], lk[7]);
-	return 0;
-}
-
-static int32_t nvt_xiaomi_lockdown_info_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, nvt_xiaomi_lockdown_info_show, NULL);
-}
-
-static const struct file_operations nvt_xiaomi_lockdown_info_fops = {
-	.owner = THIS_MODULE,
-	.open = nvt_xiaomi_lockdown_info_open,
-	.read = seq_read,
-	.llseek = seq_lseek,
-	.release = single_release,
-};
-
 int32_t nvt_set_pocket_palm_switch(uint8_t pocket_palm_switch)
 {
 	uint8_t buf[8] = {0};
@@ -823,15 +799,6 @@ int32_t nvt_extra_proc_init(void)
 		NVT_LOG("create proc/%s Succeeded!\n", NVT_XIAOMI_CONFIG_INFO);
 	}
 
-	NVT_proc_xiaomi_lockdown_info_entry = proc_create(NVT_XIAOMI_LOCKDOWN_INFO, 0444, NULL, &nvt_xiaomi_lockdown_info_fops);
-	if (NVT_proc_xiaomi_lockdown_info_entry == NULL) {
-		NVT_ERR("create proc/%s Failed!\n", NVT_XIAOMI_LOCKDOWN_INFO);
-		return -ENOMEM;
-	} else {
-		NVT_LOG("create proc/%s Succeeded!\n", NVT_XIAOMI_LOCKDOWN_INFO);
-	}
-
-	NVT_proc_pocket_palm_switch_entry = proc_create(NVT_POCKET_PALM_SWITCH, 0444, NULL, &nvt_pocket_palm_switch_fops);
 	if (NVT_proc_pocket_palm_switch_entry == NULL) {
 		NVT_ERR("create proc/%s Failed!\n", NVT_POCKET_PALM_SWITCH);
 		return -ENOMEM;
@@ -880,12 +847,6 @@ void nvt_extra_proc_deinit(void)
 		remove_proc_entry(NVT_XIAOMI_CONFIG_INFO, NULL);
 		NVT_proc_xiaomi_config_info_entry = NULL;
 		NVT_LOG("Removed /proc/%s\n", NVT_XIAOMI_CONFIG_INFO);
-	}
-
-	if (NVT_proc_xiaomi_lockdown_info_entry != NULL) {
-		remove_proc_entry(NVT_XIAOMI_LOCKDOWN_INFO, NULL);
-		NVT_proc_xiaomi_lockdown_info_entry = NULL;
-		NVT_LOG("Removed /proc/%s\n", NVT_XIAOMI_LOCKDOWN_INFO);
 	}
 
 	if (NVT_proc_pocket_palm_switch_entry != NULL) {

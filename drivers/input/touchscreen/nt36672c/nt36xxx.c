@@ -124,35 +124,6 @@ const uint16_t gesture_key_array[] = {
 };
 #endif
 
-static ssize_t nvt_cg_color_show(struct device *dev,
-				    struct device_attribute *attr, char *buf)
-{
-	return snprintf(buf, PAGE_SIZE, "%c\n", ts->lockdown_info[2]);
-}
-
-static ssize_t nvt_cg_maker_show(struct device *dev,
-				    struct device_attribute *attr, char *buf)
-{
-	return snprintf(buf, PAGE_SIZE, "%c\n", ts->lockdown_info[6]);
-}
-
-static ssize_t nvt_display_maker_show(struct device *dev,
-				    struct device_attribute *attr, char *buf)
-{
-	return snprintf(buf, PAGE_SIZE, "%c\n", ts->lockdown_info[1]);
-}
-
-static DEVICE_ATTR(cg_color, (S_IRUGO), nvt_cg_color_show, NULL);
-static DEVICE_ATTR(cg_maker, (S_IRUGO), nvt_cg_maker_show, NULL);
-static DEVICE_ATTR(display_maker, (S_IRUGO), nvt_display_maker_show, NULL);
-
-struct attribute *nvt_panel_attr[] = {
-	&dev_attr_cg_color.attr,
-	&dev_attr_cg_maker.attr,
-	&dev_attr_display_maker.attr,
-	NULL,
-};
-
 static uint8_t bTouchIsAwake = 0;
 /*******************************************************
 Description:
@@ -1140,19 +1111,6 @@ static int32_t nvt_parse_dt(struct device *dev)
 }
 #endif
 
-bool is_lockdown_empty(u8 *lockdown)
-{
-	bool ret = true;
-	int i;
-	for (i = 0; i < NVT_LOCKDOWN_SIZE; i++) {
-		if (lockdown[i] != 0) {
-			ret = false;
-			break;
-		}
-	}
-
-	return ret;
-}
 void nvt_match_fw(void)
 {
 	NVT_LOG("start match fw name");
@@ -1996,8 +1954,6 @@ static int nvt_reset_mode(int mode)
 }
 #endif
 
-extern int dsi_panel_get_lockdowninfo_for_tp(unsigned char *plockdowninfo);
-
 #ifdef CONFIG_TOUCHSCREEN_NVT_DEBUG_FS
 static void tpdbg_shutdown(struct nvt_ts_data *ts_core, bool enable)
 {
@@ -2123,30 +2079,6 @@ static void nvt_resume_work(struct work_struct *work)
 	nvt_ts_resume(&ts_core->client->dev);
 }
 
-static void get_lockdown_info(struct work_struct *work)
-{
-	int ret = 0;
-
-	NVT_LOG("lkdown_readed = %d", ts->lkdown_readed);
-	if (!ts->lkdown_readed) {
-		ret = dsi_panel_get_lockdowninfo_for_tp(ts->lockdown_info);
-		if (ret < 0) {
-			NVT_ERR("can't get lockdown info");
-		} else {
-			NVT_LOG("Lockdown:0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x\n",
-			ts->lockdown_info[0], ts->lockdown_info[1], ts->lockdown_info[2], ts->lockdown_info[3],
-			ts->lockdown_info[4], ts->lockdown_info[5], ts->lockdown_info[6], ts->lockdown_info[7]);
-		}
-		ts->lkdown_readed = true;
-		NVT_LOG("READ LOCKDOWN!!!");
-	} else {
-		NVT_LOG("use lockdown info that readed before");
-		NVT_LOG("Lockdown:0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x\n",
-			ts->lockdown_info[0], ts->lockdown_info[1], ts->lockdown_info[2], ts->lockdown_info[3],
-			ts->lockdown_info[4], ts->lockdown_info[5], ts->lockdown_info[6], ts->lockdown_info[7]);
-	}
-}
-
 /*******************************************************
 Description:
 	Novatek touchscreen driver probe function.
@@ -2161,8 +2093,6 @@ static int32_t nvt_ts_probe(struct platform_device *pdev)
 #if ((TOUCH_KEY_NUM > 0) || WAKEUP_GESTURE)
 	int32_t retry = 0;
 #endif
-	struct attribute_group *attrs_p = NULL;
-
 	NVT_LOG("start\n");
 
 	ts = kzalloc(sizeof(struct nvt_ts_data), GFP_KERNEL);
@@ -2381,7 +2311,6 @@ static int32_t nvt_ts_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err_create_nvt_lockdown_wq_failed;
 	}
-	INIT_DELAYED_WORK(&ts->nvt_lockdown_work, get_lockdown_info);
 	// please make sure boot update start after display reset(RESX) sequence
 	queue_delayed_work(nvt_lockdown_wq, &ts->nvt_lockdown_work, msecs_to_jiffies(5000));
 
@@ -2451,16 +2380,6 @@ static int32_t nvt_ts_probe(struct platform_device *pdev)
 #endif
 
 #endif
-	attrs_p = (struct attribute_group *)devm_kzalloc(&pdev->dev, sizeof(*attrs_p), GFP_KERNEL);
-	if (!attrs_p) {
-		NVT_ERR("no mem to alloc");
-		goto err_mp_proc_init_failed;
-	}
-	ts->attrs = attrs_p;
-	attrs_p->name = "panel_info";
-	attrs_p->attrs = nvt_panel_attr;
-	ret = sysfs_create_group(&pdev->dev.kobj, ts->attrs);
-
 	ts->event_wq = alloc_workqueue("nvt-event-queue",
 		WQ_UNBOUND | WQ_HIGHPRI | WQ_CPU_INTENSIVE, 1);
 	if (!ts->event_wq) {
