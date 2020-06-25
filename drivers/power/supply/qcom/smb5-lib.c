@@ -2179,6 +2179,7 @@ int smblib_get_prop_batt_status(struct smb_charger *chg,
 				union power_supply_propval *val)
 {
 	union power_supply_propval pval = {0, };
+	union power_supply_propval batt_capa ={0,};
 	bool usb_online;
 	u8 stat;
 	int rc, suspend = 0;
@@ -2234,6 +2235,11 @@ int smblib_get_prop_batt_status(struct smb_charger *chg,
 	}
 	usb_online = (bool)pval.intval;
 
+	rc = smblib_get_prop_from_bms(chg,
+			POWER_SUPPLY_PROP_CAPACITY, &batt_capa);
+	if (rc < 0)
+		smblib_err(chg, "Couldn't read SOC value, rc=%d\n", rc);
+
 	rc = smblib_read(chg, BATTERY_CHARGER_STATUS_1_REG, &stat);
 	if (rc < 0) {
 		smblib_err(chg, "Couldn't read BATTERY_CHARGER_STATUS_1 rc=%d\n",
@@ -2269,11 +2275,14 @@ int smblib_get_prop_batt_status(struct smb_charger *chg,
 		break;
 	case TERMINATE_CHARGE:
 	case INHIBIT_CHARGE:
-		if (POWER_SUPPLY_HEALTH_WARM == pval.intval
+		if (((batt_capa.intval <= 99) && usb_online) || POWER_SUPPLY_HEALTH_WARM == pval.intval
 			|| POWER_SUPPLY_HEALTH_OVERHEAT == pval.intval)
 			val->intval = POWER_SUPPLY_STATUS_CHARGING;
 		else
 			val->intval = POWER_SUPPLY_STATUS_FULL;
+
+		smblib_dbg(chg, PR_OEM, "stat=%d capacity=%d usb_online=%d BATTERY_PROP_STATUS=%d\n",
+				stat, batt_capa.intval, usb_online, val->intval);
 		break;
 	case DISABLE_CHARGE:
 	case PAUSE_CHARGE:
@@ -6086,7 +6095,7 @@ unsuspend_input:
 		rc = smblib_force_vbus_voltage(chg, FORCE_5V_BIT);
 		if (rc < 0)
 			pr_err("Failed to force 5V\n");
-		rc = smblib_usb_pd_adapter_allowance_override(chg, FORCE_5V);
+		rc = smblib_usb_pd_adapter_allowance_override(chg, !!chg->pd_active ? FORCE_5V : FORCE_NULL);
 		if (rc < 0)
 			pr_err("Failed to set CONTINUOUS allowance to 5V\n");
 		rc = smblib_set_opt_switcher_freq(chg, chg->chg_freq.freq_5V);
@@ -6757,6 +6766,13 @@ static void smblib_handle_hvdcp_3p0_auth_done(struct smb_charger *chg,
 					dev_err(chg->dev,
 					"Couldn't enable secondary chargers  rc=%d\n",
 						rc);
+			} else if (chg->sec_cp_present & QC_2P0_BIT && !chg->qc2_unsupported) {
+				pr_info("force 9V for QC2 charger\n");
+				rc = smblib_force_vbus_voltage(chg, FORCE_9V_BIT);
+				if (rc < 0)
+					pr_err("Failed to force 9V\n");
+				vote(chg->usb_icl_votable, SW_ICL_MAX_VOTER, true,
+						HVDCP2_CURRENT_UA);
 			} else {
 				if (!chg->detect_low_power_qc3_charger) {
 					vote(chg->usb_icl_votable, SW_ICL_MAX_VOTER, true,
