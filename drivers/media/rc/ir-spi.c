@@ -75,6 +75,7 @@ static ssize_t ir_spi_chardev_write(struct file *file,
 #endif
 	idata->xfer.tx_buf = idata->buffer;
 	dev_warn(&idata->spi->dev, "xfer.len%d buffer_size %d\n",(int)idata->xfer.len,idata->buffer_size);
+	pr_err("CONSUMERIR: len is %d", (int)idata->xfer.len);
 	ret = spi_sync_transfer(idata->spi, &idata->xfer, 1);
 	if (ret)
 		dev_err(&idata->spi->dev, "unable to deliver the signal\n");
@@ -198,6 +199,7 @@ static long ir_spi_chardev_ioctl(struct file *file, unsigned int cmd,
 		}
 
 		mutex_lock(&idata->mutex);
+		pr_err("CONSUMERIR: len is %d", idata->xfer.len);
 		idata->xfer.len = p;
 		mutex_unlock(&idata->mutex);
 
