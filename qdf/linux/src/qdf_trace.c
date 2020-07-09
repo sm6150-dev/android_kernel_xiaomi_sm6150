@@ -1487,6 +1487,7 @@ uint8_t qdf_get_rate_limit_by_type(uint8_t type)
 	}
 }
 
+#ifdef WLAN_DEBUG
 /**
  * qdf_get_pkt_type_string() - Get the string based on pkt type
  * @type: packet type
@@ -1570,6 +1571,7 @@ uint8_t *qdf_get_pkt_status_string(uint8_t status)
 		return "unknown";
 	}
 }
+#endif
 
 /**
  * qdf_dp_log_proto_pkt_info() - Send diag log with pkt info
@@ -2077,6 +2079,7 @@ qdf_export_symbol(qdf_dp_display_proto_pkt_debug);
 void qdf_dp_display_proto_pkt_always(struct qdf_dp_trace_record_s *record,
 			      uint16_t index, uint8_t pdev_id, uint8_t info)
 {
+#ifdef WLAN_DEBUG
 	int loc;
 	char prepend_str[QDF_DP_TRACE_PREPEND_STR_SIZE];
 	struct qdf_dp_trace_proto_buf *buf =
@@ -2091,6 +2094,7 @@ void qdf_dp_display_proto_pkt_always(struct qdf_dp_trace_record_s *record,
 		 QDF_MAC_ADDR_ARRAY(buf->sa.bytes),
 		 qdf_dp_dir_to_str(buf->dir),
 		 QDF_MAC_ADDR_ARRAY(buf->da.bytes));
+#endif
 }
 qdf_export_symbol(qdf_dp_display_proto_pkt_always);
 
