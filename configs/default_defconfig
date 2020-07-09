@@ -684,3 +684,6 @@ CONFIG_WLAN_FEATURE_PKT_CAPTURE := y
 endif
 
 CONFIG_WLAN_HANG_EVENT := y
+
+# Disable packet logging to stop wasting memory
+CONFIG_SLUB_MEM_OPTIMIZE := y
