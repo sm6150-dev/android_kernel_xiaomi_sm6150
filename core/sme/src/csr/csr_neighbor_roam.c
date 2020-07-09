@@ -228,8 +228,10 @@ QDF_STATUS csr_neighbor_roam_update_config(tpAniSirGlobal mac_ctx,
 		csr_roam_offload_scan(mac_ctx, session_id,
 			ROAM_SCAN_OFFLOAD_UPDATE_CFG, reason);
 	}
+#ifdef WLAN_DEBUG
 	sme_debug("LFR config for %s changed from %d to %d",
 			lfr_get_config_item_string(reason), old_value, value);
+#endif
 	return QDF_STATUS_SUCCESS;
 }
 
