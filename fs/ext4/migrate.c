@@ -459,7 +459,7 @@ int ext4_ext_migrate(struct inode *inode)
 		 */
 		return retval;
 
-	percpu_down_write(&sbi->s_writepages_rwsem);
+	percpu_down_write(&sbi->s_journal_flag_rwsem);
 
 	/*
 	 * Worst case we can touch the allocation bitmaps, a bgd
@@ -609,7 +609,7 @@ out_tmp_inode:
 	unlock_new_inode(tmp_inode);
 	iput(tmp_inode);
 out_unlock:
-	percpu_up_write(&sbi->s_writepages_rwsem);
+	percpu_up_write(&sbi->s_journal_flag_rwsem);
 	return retval;
 }
 
@@ -644,7 +644,7 @@ int ext4_ind_migrate(struct inode *inode)
 	if (test_opt(inode->i_sb, DELALLOC))
 		ext4_alloc_da_blocks(inode);
 
-	percpu_down_write(&sbi->s_writepages_rwsem);
+	percpu_down_write(&sbi->s_journal_flag_rwsem);
 
 	handle = ext4_journal_start(inode, EXT4_HT_MIGRATE, 1);
 	if (IS_ERR(handle)) {
@@ -686,6 +686,6 @@ errout:
 	ext4_journal_stop(handle);
 	up_write(&EXT4_I(inode)->i_data_sem);
 out_unlock:
-	percpu_up_write(&sbi->s_writepages_rwsem);
+	percpu_up_write(&sbi->s_journal_flag_rwsem);
 	return ret;
 }

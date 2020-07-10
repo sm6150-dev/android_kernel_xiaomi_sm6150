@@ -2069,7 +2069,7 @@ void f2fs_printk(struct f2fs_sb_info *sbi, const char *fmt, ...);
 
 #define f2fs_err(sbi, fmt, ...)						\
 	f2fs_printk(sbi, KERN_ERR fmt, ##__VA_ARGS__)
-#define (sbi, fmt, ...)					\
+#define f2fs_warn(sbi, fmt, ...)					\
 	f2fs_printk(sbi, KERN_WARNING fmt, ##__VA_ARGS__)
 #define f2fs_notice(sbi, fmt, ...)					\
 	f2fs_printk(sbi, KERN_NOTICE fmt, ##__VA_ARGS__)
