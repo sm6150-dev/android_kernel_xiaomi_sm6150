@@ -192,29 +192,15 @@ struct fscrypt_info {
 	 */
 	struct fscrypt_mode *ci_mode;
 
-	/*
-	 * If non-NULL, then this inode uses a master key directly rather than a
-	 * derived key, and ci_ctfm will equal ci_master_key->mk_ctfm.
-	 * Otherwise, this inode uses a derived key.
-	 */
-	struct fscrypt_master_key *ci_master_key;
-
 	/* fields from the fscrypt_context */
 	u8 ci_data_mode;
 	u8 ci_filename_mode;
 	u8 ci_flags;
 	u8 ci_master_key_descriptor[FS_KEY_DESCRIPTOR_SIZE];
-	u8 ci_nonce[FS_KEY_DERIVATION_NONCE_SIZE];
 	u8 ci_raw_key[FS_MAX_KEY_SIZE];
 
 	/* True if the key should be freed when this fscrypt_info is freed */
 	bool ci_owns_key;
-
-	/*
-	 * Encryption mode used for this inode.  It corresponds to either the
-	 * contents or filenames encryption mode, depending on the inode type.
-	 */
-	struct fscrypt_mode *ci_mode;
 
 	/* Back-pointer to the inode */
 	struct inode *ci_inode;
