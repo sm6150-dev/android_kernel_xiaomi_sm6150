@@ -88,19 +88,6 @@ void fscrypt_generate_iv(union fscrypt_iv *iv, u64 lblk_num,
 	iv->lblk_num = cpu_to_le64(lblk_num);
 }
 
-void fscrypt_generate_iv(union fscrypt_iv *iv, u64 lblk_num,
-			 const struct fscrypt_info *ci)
-{
-	memset(iv, 0, ci->ci_mode->ivsize);
-	iv->lblk_num = cpu_to_le64(lblk_num);
-
-	if (ci->ci_flags & FS_POLICY_FLAG_DIRECT_KEY)
-		memcpy(iv->nonce, ci->ci_nonce, FS_KEY_DERIVATION_NONCE_SIZE);
-
-	if (ci->ci_essiv_tfm != NULL)
-		crypto_cipher_encrypt_one(ci->ci_essiv_tfm, iv->raw, iv->raw);
-}
-
 int fscrypt_crypt_block(const struct inode *inode, fscrypt_direction_t rw,
 			   u64 lblk_num, struct page *src_page,
 			   struct page *dest_page, unsigned int len,

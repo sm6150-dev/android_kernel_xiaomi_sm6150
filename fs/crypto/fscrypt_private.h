@@ -192,13 +192,6 @@ struct fscrypt_info {
 	 */
 	struct fscrypt_mode *ci_mode;
 
-	/* fields from the fscrypt_context */
-	u8 ci_data_mode;
-	u8 ci_filename_mode;
-	u8 ci_flags;
-	u8 ci_master_key_descriptor[FS_KEY_DESCRIPTOR_SIZE];
-	u8 ci_raw_key[FS_MAX_KEY_SIZE];
-
 	/* True if the key should be freed when this fscrypt_info is freed */
 	bool ci_owns_key;
 
@@ -275,23 +268,6 @@ union fscrypt_iv {
 	};
 	u8 raw[FSCRYPT_MAX_IV_SIZE];
 };
-
-static inline bool is_private_data_mode(const struct fscrypt_context *ctx)
-{
-	return ctx->contents_encryption_mode == FS_ENCRYPTION_MODE_PRIVATE;
-}
-
-/* crypto.c */
-extern struct kmem_cache *fscrypt_info_cachep;
-extern int fscrypt_initialize(unsigned int cop_flags);
-extern int fscrypt_do_page_crypto(const struct inode *inode,
-				  fscrypt_direction_t rw, u64 lblk_num,
-				  struct page *src_page,
-				  struct page *dest_page,
-				  unsigned int len, unsigned int offs,
-				  gfp_t gfp_flags);
-extern struct page *fscrypt_alloc_bounce_page(struct fscrypt_ctx *ctx,
-					      gfp_t gfp_flags);
 
 void fscrypt_generate_iv(union fscrypt_iv *iv, u64 lblk_num,
 			 const struct fscrypt_info *ci);
