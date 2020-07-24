@@ -257,11 +257,6 @@ fscrypt_msg(const struct inode *inode, const char *level, const char *fmt, ...);
 
 #define FSCRYPT_MAX_IV_SIZE	32
 
-static inline bool is_private_data_mode(const struct fscrypt_context *ctx)
-{
-	return ctx->contents_encryption_mode == FS_ENCRYPTION_MODE_PRIVATE;
-}
-
 union fscrypt_iv {
 	struct {
 		/* logical block number within the file */

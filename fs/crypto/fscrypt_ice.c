@@ -12,8 +12,6 @@
 
 #include "fscrypt_ice.h"
 
-extern int fscrypt_get_mode_key_size(int mode);
-
 int fscrypt_using_hardware_encryption(const struct inode *inode)
 {
 	struct fscrypt_info *ci = inode->i_crypt_info;
@@ -21,30 +19,6 @@ int fscrypt_using_hardware_encryption(const struct inode *inode)
 	return ci && is_private_mode(ci->ci_mode);
 }
 EXPORT_SYMBOL(fscrypt_using_hardware_encryption);
-
-size_t fscrypt_get_ice_encryption_key_size(const struct inode *inode)
-{
-	struct fscrypt_info *ci = NULL;
-
-	if (inode)
-		ci = inode->i_crypt_info;
-	if (!ci)
-		return 0;
-
-	return fscrypt_get_mode_key_size(ci->ci_data_mode) / 2;
-}
-
-size_t fscrypt_get_ice_encryption_salt_size(const struct inode *inode)
-{
-	struct fscrypt_info *ci = NULL;
-
-	if (inode)
-		ci = inode->i_crypt_info;
-	if (!ci)
-		return 0;
-
-        return fscrypt_get_mode_key_size(ci->ci_data_mode) / 2;
-}
 
 /*
  * Retrieves encryption key from the inode
