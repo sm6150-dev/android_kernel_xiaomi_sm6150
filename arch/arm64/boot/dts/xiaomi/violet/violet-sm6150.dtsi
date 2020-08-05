@@ -1,3 +1,10 @@
+/*
+ * Copyright (C) 2020 The LineageOS Project
+ *
+ * this file is for attribution only of violet
+ * And public attribution of Xiaomi platforms (like F7B and so)
+ */
+
 #include "../qcom-base/sm6150-idp.dtsi"
 #include "violet-sm6150-audio.dtsi"
 #include "violet-sm6150-battery.dtsi"
@@ -15,30 +22,30 @@
 #include "violet-sm6150-usb.dtsi"
 
 &firmware {
-	android {
-		vbmeta {
-			parts = "vbmeta,boot,recovery,system,vendor,dtbo";
-		};
+    android {
+        vbmeta {
+            parts = "vbmeta,boot,recovery,system,vendor,dtbo";
+        };
 
-		fstab {
-			vendor {
-				fsmgr_flags = "wait,avb";
-			};
-			product {
-				compatible = "android,product";
-				dev = "/dev/block/platform/soc/7c4000.sdhci/by-name/cust";
-				type = "ext4";
-				mnt_flags = "ro,noatime,nodev,barrier=1";
-				fsmgr_flags = "wait";
-			};
-		};
-	};
+        fstab {
+            vendor {
+                fsmgr_flags = "wait,avb";
+            };
+            product {
+                compatible = "android,product";
+                dev = "/dev/block/platform/soc/7c4000.sdhci/by-name/cust";
+                type = "ext4";
+                mnt_flags = "ro,noatime,nodev,barrier=1";
+                fsmgr_flags = "wait";
+            };
+        };
+    };
 };
 
 &wdog {
-	qcom,bark-time = <15000>;
+    qcom,bark-time = <15000>;
 };
 
 &sdhc_2 {
-	cd-gpios = <&tlmm 99 0>;
+    cd-gpios = <&tlmm 99 0>;
 };

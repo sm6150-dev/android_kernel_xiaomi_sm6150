@@ -1,3 +1,10 @@
+/*
+ * Copyright (C) 2020 The LineageOS Project
+ *
+ * this file is for attribution only of violet
+ * And public attribution of Xiaomi platforms (like F7B and so)
+ */
+
 &qcom_seecom {
     reg = <0x86d00000 0x2200000>;
 };
@@ -47,10 +54,10 @@
 };
 
 &reserved_memory {
-	ramoops: ramoops@a1600000 {
-		compatible = "ramoops";
-		reg = <0 0xa1600000 0 0x800000>;
-		console-size = <0x400000>;
-		pmsg-size = <0x400000>;
+    ramoops: ramoops@a1600000 {
+        compatible = "ramoops";
+        reg = <0 0xa1600000 0 0x800000>;
+        console-size = <0x400000>;
+        pmsg-size = <0x400000>;
     };
 };
