@@ -153,6 +153,7 @@ static char *wlan_roam_debug_string(uint32_t op)
  */
 void wlan_roam_debug_dump_table(void)
 {
+#ifdef WLAN_DEBUG
 	uint32_t i;
 	int32_t current_index;
 	struct wlan_roam_debug_rec *dbg_rec;
@@ -198,6 +199,7 @@ void wlan_roam_debug_dump_table(void)
 		roam_debug("arg1 = 0x%-8x arg2 = 0x%-8x", dbg_rec->arg1,
 			   dbg_rec->arg2);
 	} while (i != current_index);
+#endif
 }
 qdf_export_symbol(global_wlan_roam_debug_table);
 
