@@ -346,7 +346,7 @@ endif
 # Feature flags which are not (currently) configurable via Kconfig
 
 #Whether to build debug version
-BUILD_DEBUG_VERSION := y
+BUILD_DEBUG_VERSION := n
 
 #Enable this flag to build driver in diag version
 BUILD_DIAG_VERSION := y
@@ -685,3 +685,13 @@ CONFIG_WLAN_FEATURE_PKT_CAPTURE := y
 endif
 
 CONFIG_WLAN_HANG_EVENT := y
+
+# Disable packet logging to stop wasting memory
+CONFIG_SLUB_MEM_OPTIMIZE := y
+
+# Do not even compile-in the debug prints
+CONFIG_WLAN_LOG_DEBUG := n
+CONFIG_FEATURE_TSO_DEBUG := n
+CONFIG_TSO_DEBUG_LOG_ENABLE := n
+CONFIG_WLAN_FEATURE_P2P_DEBUG := n
+CONFIG_ENABLE_MTRACE_LOG := n

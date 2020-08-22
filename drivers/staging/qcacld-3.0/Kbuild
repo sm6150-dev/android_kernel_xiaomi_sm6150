@@ -13,6 +13,10 @@ ifeq ($(KERNEL_BUILD), y)
 	WLAN_ROOT := drivers/staging/qcacld-3.0
 	WLAN_COMMON_ROOT := ../qca-wifi-host-cmn
 	WLAN_COMMON_INC := $(WLAN_ROOT)/$(WLAN_COMMON_ROOT)
+
+	# Disable debugging by forcing BUILD_VARIANT user if
+	# we are building this outside of Android
+	TARGET_BUILD_VARIANT := user
 endif
 
 WLAN_COMMON_ROOT ?= ../qca-wifi-host-cmn
@@ -2299,8 +2303,7 @@ CMN_IDS = $(shell cd "$(WLAN_COMMON_INC)" && \
 		sed -nE 's/^\s*Change-Id: (I[0-f]{10})[0-f]{30}\s*$$/\1/p' | \
 		paste -sd "," -)
 
-TIMESTAMP = $(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
-BUILD_TAG = "$(TIMESTAMP); cld:$(CLD_IDS); cmn:$(CMN_IDS);"
+BUILD_TAG = "cld:$(CLD_IDS); cmn:$(CMN_IDS);"
 # It's assumed that BUILD_TAG is used only in wlan_hdd_main.c
 CFLAGS_wlan_hdd_main.o += -DBUILD_TAG=\"$(BUILD_TAG)\"
 endif

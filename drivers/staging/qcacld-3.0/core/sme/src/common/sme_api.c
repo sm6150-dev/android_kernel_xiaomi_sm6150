@@ -6027,8 +6027,10 @@ void sme_set_cc_src(tHalHandle hHal, enum country_src cc_src)
 
 	mac_ctx->reg_hint_src = cc_src;
 
+#ifdef WLAN_DEBUG
 	sme_debug("Country source is %s",
 		  sme_reg_hint_to_str(cc_src));
+#endif
 }
 
 /**
