@@ -101,10 +101,10 @@ extern const uint16_t touch_key_array[TOUCH_KEY_NUM];
 extern const uint16_t gesture_key_array[];
 #endif
 #define BOOT_UPDATE_FIRMWARE 1
-#define DEFAULT_FW01_UPDATE_FIRMWARE_NAME "novatek_nt36672c_g7b_fw01.bin"
-#define DEFAULT_MP01_UPDATE_FIRMWARE_NAME "novatek_nt36672c_g7b_mp01.bin"
-#define DEFAULT_FW02_UPDATE_FIRMWARE_NAME "novatek_nt36672c_g7b_fw02.bin"
-#define DEFAULT_MP02_UPDATE_FIRMWARE_NAME "novatek_nt36672c_g7b_mp02.bin"
+//#define DEFAULT_BOOT_UPDATE_FIRMWARE_NAME "novatek_ts_fw.bin"
+//#define DEFAULT_MP_UPDATE_FIRMWARE_NAME   "novatek_ts_mp.bin"
+#define DEFAULT_BOOT_UPDATE_FIRMWARE_NAME "novatek_nt36672c_g7b_fw01.bin"
+#define DEFAULT_MP_UPDATE_FIRMWARE_NAME   "novatek_nt36672c_g7b_mp01.bin"
 
 //---ESD Protect.---
 #define NVT_TOUCH_ESD_PROTECT 1
