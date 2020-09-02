@@ -514,6 +514,10 @@ static void __init mm_init(void)
 int fpsensor;
 #endif
 
+#ifdef CONFIG_MACH_XIAOMI_G7B
+int paneltype;
+#endif
+
 asmlinkage __visible void __init start_kernel(void)
 {
 	char *command_line;
@@ -559,6 +563,10 @@ asmlinkage __visible void __init start_kernel(void)
 
 #ifdef CONFIG_MACH_XIAOMI_F7B
 	fpsensor = strstr(command_line, "androidboot.fpsensor=fpc") ? 1 : 2;
+#endif
+
+#ifdef CONFIG_MACH_XIAOMI_G7B
+	paneltype = strstr(command_line, "dsi_g7b_37_02_0a_video_display") ? 1 : 2;
 #endif
 
 	parse_early_param();

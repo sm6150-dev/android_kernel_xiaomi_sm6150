@@ -1153,11 +1153,20 @@ bool is_lockdown_empty(u8 *lockdown)
 
 	return ret;
 }
+
+extern int paneltype;
+
 void nvt_match_fw(void)
 {
-	NVT_LOG("start match fw name");
-		ts->fw_name = DEFAULT_BOOT_UPDATE_FIRMWARE_NAME;
-		ts->mp_name = DEFAULT_MP_UPDATE_FIRMWARE_NAME;
+	if (paneltype == 1) {
+		NVT_LOG("matched fw type 01 name");
+		ts->fw_name = DEFAULT_FW01_UPDATE_FIRMWARE_NAME;
+		ts->mp_name = DEFAULT_MP01_UPDATE_FIRMWARE_NAME;
+	} else {
+		NVT_LOG("matched fw type 02 name");
+		ts->fw_name = DEFAULT_FW02_UPDATE_FIRMWARE_NAME;
+		ts->mp_name = DEFAULT_MP02_UPDATE_FIRMWARE_NAME;
+	}
 }
 
 /*******************************************************
