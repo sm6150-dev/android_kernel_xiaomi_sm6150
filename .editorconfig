@@ -8,3 +8,7 @@ indent_size = 8
 charset = utf-8
 # To avoid editing too much in commits
 trim_trailing_whitespace = false
+
+[*.dts]
+indent_style = space
+indent_size = 4
