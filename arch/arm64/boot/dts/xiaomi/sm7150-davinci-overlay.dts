@@ -20,7 +20,7 @@
 #include "common/qcom-base/sdmmagpie-audio-overlay.dtsi"
 
 / {
-	model = "QRD";
+	model = "DAVINCI";
 	compatible = "qcom,sdmmagpie-qrd", "qcom,sdmmagpie", "qcom,qrd";
 	qcom,msm-id = <365 0x0>;
 	qcom,board-id = <11 0>;
