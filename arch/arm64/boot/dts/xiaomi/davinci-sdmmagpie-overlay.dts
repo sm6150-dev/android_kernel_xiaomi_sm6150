@@ -17,7 +17,6 @@
 #include <dt-bindings/clock/qcom,camcc-sdmmagpie.h>
 
 #include "davinci/davinci-sdmmagpie.dtsi"
-
 #include "davinci/davinci-audio-overlay.dtsi"
 #include "davinci/davinci-nfc-overlay.dtsi"
 

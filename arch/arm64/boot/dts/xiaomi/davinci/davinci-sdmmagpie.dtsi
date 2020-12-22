@@ -15,6 +15,7 @@
 #include "davinci-sdmmagpie-fingerprint.dtsi"
 #include "davinci-sdmmagpie-motor.dtsi"
 #include "davinci-sdmmagpie-pinctrl.dtsi"
+#include "davinci-sdmmagpie-thermal.dtsi"
 #include "davinci-sdmmagpie-touchscreen.dtsi"
 
 &firmware {

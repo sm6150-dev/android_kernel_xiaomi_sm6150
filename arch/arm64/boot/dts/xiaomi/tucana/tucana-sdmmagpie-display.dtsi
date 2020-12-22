@@ -4,8 +4,6 @@
  * this file is for attribution only of tucana
  * And public attribution of Xiaomi platforms (like F4 and so)
  */
- 
-#include "../common/xiaomi-sdmmagpie-display.dtsi"
 
 #include "display/dsi-panel-xiaomi-f4-36-02-0b-fhd-cmd.dtsi"
 #include "display/dsi-panel-xiaomi-f4-41-06-0a-fhd-cmd.dtsi"

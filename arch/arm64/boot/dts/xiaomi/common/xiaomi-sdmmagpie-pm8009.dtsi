@@ -1,0 +1,16 @@
+/*
+ * Copyright (C) 2020 The LineageOS Project
+ *
+ */
+
+&spmi_bus {
+    qcom,pm8009@a {
+        qcom,revid@100 {
+            status = "disabled";
+        };
+    };
+};
+
+&pm8009_gpios {
+    status = "disabled";
+};

@@ -14,13 +14,19 @@
 #include "../qcom-base/sdmmagpie-thermal-overlay.dtsi"
 
 #include "xiaomi-sdmmagpie-audio.dtsi"
+#include "xiaomi-sdmmagpie-display.dtsi"
 #include "xiaomi-sdmmagpie-gpu.dtsi"
 #include "xiaomi-sdmmagpie-leds.dtsi"
 #include "xiaomi-sdmmagpie-memory.dtsi"
 #include "xiaomi-sdmmagpie-nfc.dtsi"
 #include "xiaomi-sdmmagpie-pinctrl.dtsi"
+#include "xiaomi-sdmmagpie-pm6150.dtsi"
+#include "xiaomi-sdmmagpie-pm6150l.dtsi"
+#include "xiaomi-sdmmagpie-pm8009.dtsi"
 #include "xiaomi-sdmmagpie-regulator.dtsi"
+#include "xiaomi-sdmmagpie-thermal.dtsi"
 #include "xiaomi-sdmmagpie-usb.dtsi"
+#include "xiaomi-sdmmagpie-vidc.dtsi"
 
 &firmware {
     android {
@@ -122,4 +128,28 @@
             gpio-key,wakeup;
         };
     };
+};
+
+&soc {
+    restart@c264000 {
+        qcom,force-warm-reboot;
+    };
+};
+
+&pm6150_vadc {
+  rf_pa0_therm {
+    status = "disabled";
+  };
+  rf_pa1_therm {
+    status = "disabled";
+  };
+};
+
+&pm6150_adc_tm{
+  rf_pa0_therm {
+    status = "disabled";
+  };
+  rf_pa1_therm {
+    status = "disabled";
+  };
 };

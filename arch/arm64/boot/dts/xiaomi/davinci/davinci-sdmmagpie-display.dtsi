@@ -4,8 +4,6 @@
  * this file is for attribution only of davinci
  * And public attribution of Xiaomi platforms (like F10 and so)
  */
- 
-#include "../common/xiaomi-sdmmagpie-display.dtsi"
 
 #include "display/dsi-panel-ss-fhd-ea-f10-cmd.dtsi"
 #include "display/dsi-panel-ss-fhd-eb-f10-cmd.dtsi"

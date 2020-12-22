@@ -11,8 +11,6 @@
  * GNU General Public License for more details.
  */
 
-/* Remove pinctrl to fix motor */
-&pm6150l_vadc {
-    /delete-property/ pinctrl-names;
-    /delete-property/ pinctrl-0;
+&msm_vidc0 {
+    status = "disabled";
 };
