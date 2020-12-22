@@ -38,7 +38,6 @@
 	aliases {
 		spi0 = &qupv3_se0_spi;
 		spi1 = &qupv3_se4_spi;
-		spi2 = &qupv3_se8_spi;
 		i2c0 = &qupv3_se2_i2c;
 		i2c1 = &qupv3_se7_i2c;
 		i2c2 = &qupv3_se9_i2c;
@@ -486,7 +485,7 @@
 		};
 	};
 
-	reserved_memory: reserved-memory {
+	reserved-memory {
 		#address-cells = <2>;
 		#size-cells = <2>;
 		ranges;
@@ -585,6 +584,12 @@
 			compatible = "shared-dma-pool";
 			no-map;
 			reg = <0 0x9e400000 0 0x1400000>;
+		};
+
+		cdsp_sec_mem: cdsp_sec_regions@0x9f800000 {
+			compatible = "removed-dma-pool";
+			no-map;
+			reg = <0x0 0x9f800000 0x0 0x1e00000>;
 		};
 
 		adsp_mem: adsp_region {
@@ -1400,7 +1405,7 @@
 		};
 	};
 
-	mem_dump: mem_dump {
+	mem_dump {
 		compatible = "qcom,mem-dump";
 		memory-region = <&dump_mem>;
 
@@ -3325,7 +3330,7 @@
 };
 
 &pm6150_vadc {
-	rf_pa0_therm: rf_pa0_therm {
+	rf_pa0_therm {
 		reg = <ADC_AMUX_THM2_PU2>;
 		label = "rf_pa0_therm";
 		qcom,ratiometric;
@@ -3333,7 +3338,7 @@
 		qcom,pre-scaling = <1 1>;
 	};
 
-	rf_pa1_therm: rf_pa1_therm {
+	rf_pa1_therm {
 		reg = <ADC_AMUX_THM3_PU2>;
 		label = "rf_pa1_therm";
 		qcom,ratiometric;
@@ -3363,13 +3368,13 @@
 		qcom,hw-settle-time = <200>;
 	};
 
-	rf_pa0_therm: rf_pa0_therm {
+	rf_pa0_therm {
 		reg = <ADC_AMUX_THM2_PU2>;
 		qcom,ratiometric;
 		qcom,hw-settle-time = <200>;
 	};
 
-	rf_pa1_therm: rf_pa1_therm {
+	rf_pa1_therm {
 		reg = <ADC_AMUX_THM3_PU2>;
 		qcom,ratiometric;
 		qcom,hw-settle-time = <200>;
