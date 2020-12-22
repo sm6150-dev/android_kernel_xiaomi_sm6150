@@ -1,0 +1,13 @@
+#include "sm7150-xiaomi.dtsi"
+#include "sm7150-xiaomi-qrd.dtsi"
+
+#include "sm7150-xiaomi-memory.dtsi"
+#include "sm7150-xiaomi-pinctrl.dtsi"
+#include "sm7150-xiaomi-pm6150.dtsi"
+#include "sm7150-xiaomi-pm6150l.dtsi"
+#include "sm7150-xiaomi-regulator.dtsi"
+#include "sm7150-xiaomi-sde-display.dtsi"
+#include "sm7150-xiaomi-sde.dtsi"
+#include "sm7150-xiaomi-sm6150-audio-overlay.dtsi"
+#include "sm7150-xiaomi-sm6150-audio.dtsi"
+#include "sm7150-xiaomi-thermal.dtsi"

@@ -3325,7 +3325,7 @@
 };
 
 &pm6150_vadc {
-	rf_pa0_therm: rf_pa0_therm {
+	rf_pa0_therm {
 		reg = <ADC_AMUX_THM2_PU2>;
 		label = "rf_pa0_therm";
 		qcom,ratiometric;
@@ -3333,7 +3333,7 @@
 		qcom,pre-scaling = <1 1>;
 	};
 
-	rf_pa1_therm: rf_pa1_therm {
+	rf_pa1_therm {
 		reg = <ADC_AMUX_THM3_PU2>;
 		label = "rf_pa1_therm";
 		qcom,ratiometric;
@@ -3363,13 +3363,13 @@
 		qcom,hw-settle-time = <200>;
 	};
 
-	rf_pa0_therm: rf_pa0_therm {
+	rf_pa0_therm {
 		reg = <ADC_AMUX_THM2_PU2>;
 		qcom,ratiometric;
 		qcom,hw-settle-time = <200>;
 	};
 
-	rf_pa1_therm: rf_pa1_therm {
+	rf_pa1_therm {
 		reg = <ADC_AMUX_THM3_PU2>;
 		qcom,ratiometric;
 		qcom,hw-settle-time = <200>;

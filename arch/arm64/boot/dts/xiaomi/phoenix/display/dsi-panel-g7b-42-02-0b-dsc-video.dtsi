@@ -56,10 +56,12 @@
 		qcom,mdss-dsi-panel-max-luminance = <0x0F 0x20>;
 		qcom,mdss-dsi-panel-max-luminance-valid = <0x01 0x01>;
 
+#if 1
 		qcom,mdss-dsi-pan-enable-dynamic-fps;
 		qcom,mdss-dsi-pan-fps-update =
 			"dfps_immediate_porch_mode_vfp";
 		qcom,dsi-supported-dfps-list = <30 60 90 120>;
+#endif
 
 		qcom,mdss-dsi-display-timings {
 			timing@0{

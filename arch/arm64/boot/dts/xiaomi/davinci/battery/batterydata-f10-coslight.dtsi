@@ -20,7 +20,7 @@ qcom,3901684_Xiaomi_F10_Coslight_4000mAH_PM7150 {
 				  401  500  4340000>;
 	qcom,fg-cc-cv-threshold-mv = <4390>;
 	qcom,nom-batt-capacity-mah = <4000>;
-   	qcom,batt-id-kohm = <100>;
+    qcom,batt-id-kohm = <100>;
 	qcom,battery-beta = <4250>;
 	qcom,battery-therm-kohm = <100>;
 	qcom,battery-type = "f10_coslt";

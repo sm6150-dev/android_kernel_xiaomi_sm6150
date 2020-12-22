@@ -1,0 +1,3 @@
+&sm6150_snd {
+  /delete-property/ fsa4480-i2c-handle;
+};

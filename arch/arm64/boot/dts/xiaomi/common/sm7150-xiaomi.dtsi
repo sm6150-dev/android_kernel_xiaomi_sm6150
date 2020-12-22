@@ -1,0 +1,50 @@
+&firmware {
+  android {
+    vbmeta {
+      parts = "vbmeta,boot,system,vendor,dtbo,recovery";
+    };
+    fstab {
+      vendor{
+        fsmgr_flags = "wait,avb";
+      };
+    };
+  };
+};
+
+&wdog {
+  qcom,bark-time = <20000>;
+  qcom,pet-time = <15000>;
+};
+
+&ufshc_mem {
+  spm-level = <3>;
+};
+
+&pm6150_vadc {
+	rf_pa0_therm {
+    status = "disabled";
+	};
+
+	rf_pa1_therm {
+    status = "disabled";
+	};
+
+	quiet_therm {
+    status = "disabled";
+	};
+};
+
+&pm6150_adc_tm {
+	/* Channel nodes */
+	xo_therm {
+    status = "disabled";
+	};
+
+	rf_pa0_therm {
+    status = "disabled";
+	};
+
+	rf_pa1_therm {
+    status = "disabled";
+	};
+};

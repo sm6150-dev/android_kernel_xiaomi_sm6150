@@ -57,10 +57,12 @@
 		qcom,mdss-dsi-panel-max-luminance-valid = <0x01 0x01>;
 		qcom,esd-err-irq-gpio = <&tlmm 32 0x2002>; /* trig-flags: falling-0x0002 rasing-0x0001*/
 		qcom,mdss-dsi-qsync-min-refresh-rate = <60>;
+#if 1
 		qcom,mdss-dsi-pan-enable-dynamic-fps;
 		qcom,mdss-dsi-pan-fps-update =
 			"dfps_immediate_porch_mode_vfp";
 		qcom,dsi-supported-dfps-list = <120 90 60 50 30>;
+#endif
 		qcom,is-tddi-flag;
 		qcom,mdss-dsi-display-timings {
 			timing@0{
@@ -139,7 +141,7 @@
 						15 00 00 00 00 00 02 5A 00
 						15 01 00 00 00 00 02 FF E0
 						15 00 00 00 00 00 02 FB 01
-						15 00 00 00 00 00 02 25 00
+						15 00 00 00 00 00 02 25 02
 						15 00 00 00 00 00 02 4E 02
 						15 00 00 00 00 00 02 85 02
 						15 01 00 00 00 00 02 FF D0
@@ -229,13 +231,6 @@
 						15 00 00 00 00 00 02 65 B2
 						15 00 00 00 00 00 02 66 B2
 						15 00 00 00 00 00 02 67 B2
-						15 01 00 00 00 00 02 FF C0
-						15 00 00 00 00 00 02 FB 01
-						15 00 00 00 00 00 02 9C 11
-						15 00 00 00 00 00 02 9D 11
-						15 01 00 00 00 00 02 FF F0
-						15 00 00 00 00 00 02 FB 01
-						15 00 00 00 00 00 02 9C 00
 						15 01 00 00 00 00 02 FF 10
 						15 00 00 00 00 00 02 FB 01
 						39 00 00 00 00 00 03 51 0B 6C
@@ -247,8 +242,6 @@
 						15 00 00 00 00 00 02 3F 01
 						15 00 00 00 00 00 02 43 08
 						15 00 00 00 00 00 02 40 25
-						15 01 00 00 00 00 02 FF E0
-						15 00 00 00 00 00 02 35 82
 						15 01 00 00 00 00 02 FF 10
 				];
 				qcom,mdss-dsi-off-command = [

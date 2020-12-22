@@ -1,0 +1,6 @@
+&soc {
+  rpmh-regulator-ldoa16 {
+    regulator-min-microvolt = <1800000>;
+    qcom,init-voltage = <1800000>;
+  };
+};
