@@ -1,0 +1,3 @@
+&msm_vidc0 {
+  status = "disabled";
+};
