@@ -5,6 +5,7 @@
 #include "sm7150-xiaomi-pm6150.dtsi"
 #include "sm7150-xiaomi-pm6150l.dtsi"
 #include "sm7150-xiaomi-pm8009.dtsi"
+#include "sm7150-xiaomi-qupv3.dtsi"
 #include "sm7150-xiaomi-regulator.dtsi"
 #include "sm7150-xiaomi-sde-display.dtsi"
 #include "sm7150-xiaomi-sde.dtsi"

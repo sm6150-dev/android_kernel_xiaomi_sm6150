@@ -1,0 +1,3 @@
+&qupv3_se3_4uart {
+  status = "ok";
+};
