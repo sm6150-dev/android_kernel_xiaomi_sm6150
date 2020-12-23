@@ -1,6 +1,24 @@
-&mdss_mdp {
-  clock-rate = <0 0 0 0 344000000 19200000 200000000
-        200000000>;
-  qcom,sde-num-mnoc-ports = <1>;
-  qcom,sde-axi-bus-width = <32>;
+&soc {
+  dsi_panel_pwr_supply_labibb_amoled_xiaomi: dsi_panel_pwr_supply_labibb_amoled_xiaomi {
+    #address-cells = <1>;
+    #size-cells = <0>;
+
+    qcom,panel-supply-entry@0 {
+      reg = <0>;
+      qcom,supply-name = "vddio";
+      qcom,supply-min-voltage = <1880000>;
+      qcom,supply-max-voltage = <1880000>;
+      qcom,supply-enable-load = <32000>;
+      qcom,supply-disable-load = <80>;
+    };
+
+    qcom,panel-supply-entry@1 {
+      reg = <1>;
+      qcom,supply-name = "vdda-3p3";
+      qcom,supply-min-voltage = <3000000>;
+      qcom,supply-max-voltage = <3000000>;
+      qcom,supply-enable-load = <13200>;
+      qcom,supply-disable-load = <80>;
+    };
+  };
 };

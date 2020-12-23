@@ -2,9 +2,10 @@
 #include "display/dsi-panel-ss-fhd-eb-f10-cmd.dtsi"
 
 &soc {
-    dsi_ss_fhd_ea_f10_cmd_display: qcom,dsi-display@22 {
+    dsi_ss_fhd_ea_f10_cmd_display: qcom,dsi-display@0 {
         label = "dsi_ss_fhd_ea_f10_cmd_display";
         qcom,display-type = "primary";
+        qcom,dsi-display-active;
 
         qcom,dsi-ctrl-num = <0>;
         qcom,dsi-phy-num = <0>;
@@ -12,10 +13,10 @@
         qcom,dsi-panel = <&dsi_ss_fhd_ea_f10_cmd>;
     };
 
-    dsi_ss_fhd_eb_f10_cmd_display: qcom,dsi-display@23 {
-
+    dsi_ss_fhd_eb_f10_cmd_display: qcom,dsi-display@1 {
         label = "dsi_ss_fhd_eb_f10_cmd_display";
         qcom,display-type = "primary";
+        qcom,dsi-display-active;
 
         qcom,dsi-ctrl-num = <0>;
         qcom,dsi-phy-num = <0>;
@@ -32,7 +33,7 @@
 };
 
 &dsi_ss_fhd_ea_f10_cmd {
-    qcom,panel-supply-entries = <&dsi_panel_pwr_supply_labibb_amoled>;
+    qcom,panel-supply-entries = <&dsi_panel_pwr_supply_labibb_amoled_xiaomi>;
     qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
     qcom,mdss-dsi-bl-min-level = <2>;
     qcom,mdss-dsi-bl-max-level = <2047>;
@@ -55,7 +56,7 @@
 };
 
 &dsi_ss_fhd_eb_f10_cmd {
-    qcom,panel-supply-entries = <&dsi_panel_pwr_supply_labibb_amoled>;
+    qcom,panel-supply-entries = <&dsi_panel_pwr_supply_labibb_amoled_xiaomi>;
     qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
     qcom,mdss-dsi-bl-min-level = <256>;
     qcom,mdss-dsi-bl-max-level = <4095>;
