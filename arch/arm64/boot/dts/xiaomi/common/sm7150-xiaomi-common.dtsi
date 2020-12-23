@@ -1,3 +1,4 @@
 #include "sm7150-xiaomi-audio.dtsi"
 #include "sm7150-xiaomi-fingerprint-goodix.dtsi"
 #include "sm7150-xiaomi-memory.dtsi"
+#include "sm7150-xiaomi-tfa98xx.dtsi"

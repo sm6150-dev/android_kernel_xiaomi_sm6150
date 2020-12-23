@@ -2,6 +2,8 @@
 #include "../common/sm7150-xiaomi-common.dtsi"
 #include "../common/sm7150-xiaomi-nfc.dtsi"
 
+#include "sm7150-davinci-qupv3.dtsi"
+
 #include "sm7150-davinci-fingerprint-goodix.dtsi"
 #include "sm7150-davinci-sde-display.dtsi"
 #include "sm7150-davinci-thermal.dtsi"

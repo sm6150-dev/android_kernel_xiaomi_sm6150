@@ -1,0 +1,114 @@
+/* F10 AMP */
+&qupv3_se4_i2c {
+  tfa98xx_4: tfa98xx@34 {
+      compatible = "nxp,tfa98xx";
+      irq-gpio = <&tlmm 56 0>;
+      interrupt-parent = <&tlmm>;
+      interrupts = <56 0>;
+      interrupt-names = "smartpa_irq";
+      pinctrl-names = "default", "sleep";
+      pinctrl-0 = <&smartpa_int_active &smartpa_enable_active>;
+      pinctrl-1 = <&smartpa_int_suspend &smartpa_enable_suspend>;
+      reg = <0x34>;
+  };
+};
+
+/* G7B AMP */
+&qupv3_se7_i2c {
+  tfa98xx_7: tfa98xx@34 {
+      compatible = "nxp,tfa98xx";
+      reset-gpio = <&tlmm 66 0>;
+      irq-gpio = <&tlmm 93 0>;
+      interrupt-parent = <&tlmm>;
+      interrupts = <93 0>;
+      interrupt-names = "smartpa_irq";
+      pinctrl-names = "default", "sleep";
+      pinctrl-0 = <&smartpa_int_active &smartpa_enable_active>;
+      pinctrl-1 = <&smartpa_int_suspend &smartpa_enable_suspend>;
+      reg = <0x34>;
+  };
+};
+
+/* F4 AMP */
+&qupv3_se9_i2c {
+  tfa98xx_9: tfa98xx@34 {
+      compatible = "nxp,tfa98xx";
+      reset-gpio = <&tlmm 12 0>;
+      irq-gpio = <&tlmm 56 0>;
+      interrupt-parent = <&tlmm>;
+      interrupts = <56 0>;
+      interrupt-names = "smartpa_irq";
+      pinctrl-names = "default", "sleep";
+      pinctrl-0 = <&smartpa_int_active &smartpa_enable_active>;
+      pinctrl-1 = <&smartpa_int_suspend &smartpa_enable_suspend>;
+      reg = <0x34>;
+  };
+};
+
+&tlmm {
+  smartpa_int_active: smartpa_int_active {
+    /* active state */
+    mux {
+        /* GPIO 56 Interrupt */
+        pins = "gpio56";
+        function = "gpio";
+    };
+
+    config {
+        pins = "gpio56";
+        drive-strength = <2>; /* 2 MA */
+        bias-pull-up;
+        input-enable;
+    };
+};
+
+smartpa_int_suspend: smartpa_int_suspend {
+    /* sleep state */
+    mux {
+        /* GPIO 56 Interrupt */
+        pins = "gpio56";
+        function = "gpio";
+    };
+
+    config {
+        pins = "gpio56";
+        drive-strength = <2>; /* 2 MA */
+        bias-pull-up;
+        input-enable;
+    };
+};
+
+smartpa_enable_active: smartpa_enable_active {
+    /* active state */
+    mux {
+        /* GPIO 67 rst pin */
+        pins = "gpio67";
+        function = "gpio";
+    };
+
+    config {
+        pins = "gpio67";
+        drive-strength = <2>;
+        bias-disable;
+        bias-pull-down;
+        output-low;
+    };
+};
+
+smartpa_enable_suspend: smartpa_enable_suspend {
+    /* sleep state */
+    mux {
+        /* GPIO 67 rst pin */
+        pins = "gpio67";
+        function = "gpio";
+    };
+
+    config {
+        pins = "gpio67";
+        drive-strength = <2>;
+        bias-disable;
+        bias-pull-down;
+        output-low;
+    };
+  };
+};

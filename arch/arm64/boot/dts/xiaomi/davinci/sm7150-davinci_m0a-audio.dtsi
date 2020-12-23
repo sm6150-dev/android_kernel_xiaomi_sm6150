@@ -1,0 +1,4 @@
+&tfa98xx_4 {
+  status = "ok";
+  reset-gpio = <&tlmm 12 0>;
+};
