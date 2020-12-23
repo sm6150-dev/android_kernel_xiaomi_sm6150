@@ -10,3 +10,8 @@
     };
   };
 };
+
+&wdog {
+    qcom,bark-time = <20000>;
+    qcom,pet-time = <15000>;
+};
