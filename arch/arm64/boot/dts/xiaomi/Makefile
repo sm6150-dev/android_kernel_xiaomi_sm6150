@@ -1,10 +1,11 @@
 dtbo-$(CONFIG_MACH_XIAOMI_F10) += \
     sm7150-davinci-overlay.dtbo \
-    sm7150-davinci_m0a-overlay.dtbo
+    sm7150-davinci_m0a-overlay.dtbo \
+    sm7150-davinci_m0b-overlay.dtbo
 
-sm7150-davinci-overlay.dtbo-base := common/qcom-base/sdmmagpie.dtb
-sm7150-davinci_m0a-overlay.dtbo-base := common/qcom-base/sdmmagpie.dtb
-
+sm7150-davinci-overlay.dtbo-base := sm7150-davinci.dtb
+sm7150-davinci_m0a-overlay.dtbo-base := sm7150-davinci_m0a.dtb
+sm7150-davinci_m0b-overlay.dtbo-base := sm7150-davinci_m0b.dtb
 always		:= $(dtb-y)
 subdir-y	:= $(dts-dirs)
 

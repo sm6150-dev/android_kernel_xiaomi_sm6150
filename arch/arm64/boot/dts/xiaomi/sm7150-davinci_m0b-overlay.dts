@@ -16,11 +16,11 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/clock/qcom,camcc-sdmmagpie.h>
 
-#include "davinci/sm7150-davinci_m0a-audio.dtsi"
+#include "davinci/sm7150-davinci-nfc.dtsi"
 
 / {
 	model = "DAVINCI";
 	compatible = "qcom,sdmmagpie-qrd", "qcom,sdmmagpie", "qcom,qrd";
 	qcom,msm-id = <365 0x0>;
-	qcom,board-id = <40 0>;
+	qcom,board-id = <41 0>;
 };
