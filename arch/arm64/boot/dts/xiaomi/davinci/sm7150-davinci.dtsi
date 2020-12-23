@@ -1,3 +1,4 @@
 #include "../common/sm7150-xiaomi-qrd.dtsi"
 #include "../common/sm7150-xiaomi-common.dtsi"
+#include "../common/sm7150-xiaomi-nfc.dtsi"
 #include "sm7150-davinci-sde-display.dtsi"
