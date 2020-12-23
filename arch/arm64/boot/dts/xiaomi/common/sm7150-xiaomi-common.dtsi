@@ -11,4 +11,5 @@
 #include "sm7150-xiaomi-sde.dtsi"
 #include "sm7150-xiaomi-tfa98xx.dtsi"
 #include "sm7150-xiaomi-thermal.dtsi"
+#include "sm7150-xiaomi-usb.dtsi"
 #include "sm7150-xiaomi-vidc.dtsi"
