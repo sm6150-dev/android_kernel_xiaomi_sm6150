@@ -4,4 +4,5 @@
 
 #include "sm7150-davinci-fingerprint-goodix.dtsi"
 #include "sm7150-davinci-sde-display.dtsi"
+#include "sm7150-davinci-thermal.dtsi"
 #include "sm7150-davinci-usb.dtsi"
