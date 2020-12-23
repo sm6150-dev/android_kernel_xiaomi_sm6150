@@ -1,0 +1,8 @@
+&thermal_zones {
+  rf-pa0-therm-adc {
+    status = "disabled";
+  };
+  rf-pa1-therm-adc {
+    status = "disabled";
+  };
+};
