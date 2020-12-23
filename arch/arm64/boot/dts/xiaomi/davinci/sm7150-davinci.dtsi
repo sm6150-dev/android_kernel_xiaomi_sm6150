@@ -5,6 +5,7 @@
 #include "sm7150-davinci-qupv3.dtsi"
 
 #include "sm7150-davinci-fingerprint-goodix.dtsi"
+#include "sm7150-davinci-motor.dtsi"
 #include "sm7150-davinci-sde-display.dtsi"
 #include "sm7150-davinci-thermal.dtsi"
 #include "sm7150-davinci-touchscreen-goodix.dtsi"
