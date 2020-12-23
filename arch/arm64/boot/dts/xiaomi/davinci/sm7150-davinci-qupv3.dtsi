@@ -1,3 +1,7 @@
 &qupv3_se4_i2c {
   status = "ok";
 };
+
+&qupv3_se7_i2c{
+  status = "ok";
+};
