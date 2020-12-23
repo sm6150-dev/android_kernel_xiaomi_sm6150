@@ -1,0 +1,7 @@
+&soc {
+  fingeprint_goodix: fingerprint_goodix {
+      compatible = "goodix,fingerprint";
+      fp-gpio-pwr = <&tlmm 63 0>;
+      status = "ok";
+  };
+};

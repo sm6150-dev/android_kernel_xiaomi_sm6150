@@ -1,0 +1,50 @@
+&fingerprint_goodix {
+  goodix,gpio-reset = <&tlmm 65 0x0>;
+  goodix,gpio-irq = <&tlmm 69 0x0>;
+};
+
+&tlmm {
+  /* GPIO_65 : FP_RESET_N */
+  msm_gpio_65: msm_gpio_65 {
+      mux {
+           pins = "gpio65";
+           function = "gpio";
+      };
+
+      config {
+          pins = "gpio65";
+          drive-strength = <2>;
+          bias-disable;
+          output-low;
+      };
+  };
+
+  /* GPIO_65 : FP_RESET_N, state device active*/
+  msm_gpio_65_output_high: msm_gpio_65_output_high {
+      mux {
+          pins = "gpio65";
+          function = "gpio";
+      };
+
+      config {
+          pins = "gpio65";
+          drive-strength = <2>;
+          bias-disable;
+          output-high;
+      };
+  };
+
+  /* GPIO_69 : FP_INT_N */
+  msm_gpio_69: msm_gpio_69 {
+      mux {
+          pins = "gpio69";
+          function = "gpio";
+      };
+
+      config {
+          pins = "gpio69";
+          drive-strength = <2>;
+          bias-pull-down;
+      };
+  };
+};
