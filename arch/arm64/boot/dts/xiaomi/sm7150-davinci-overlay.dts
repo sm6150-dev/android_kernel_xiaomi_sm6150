@@ -23,5 +23,5 @@
 	model = "DAVINCI";
 	compatible = "qcom,sdmmagpie-qrd", "qcom,sdmmagpie", "qcom,qrd";
 	qcom,msm-id = <365 0x0>;
-	qcom,board-id = <39 0>;
+	qcom,board-id = <39 0>, <41 0>;
 };
