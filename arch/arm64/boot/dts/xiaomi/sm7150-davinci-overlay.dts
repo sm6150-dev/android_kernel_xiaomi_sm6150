@@ -18,6 +18,7 @@
 
 #include "davinci/sm7150-davinci.dtsi"
 #include "davinci/sm7150-davinci-audio.dtsi"
+#include "davinci/sm7150-davinci-nfc.dtsi"
 
 / {
 	model = "DAVINCI";
