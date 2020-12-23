@@ -9,7 +9,3 @@
 &qupv3_se8_2uart {
   status = "ok";
 };
-
-&qupv3_se9_i2c {
-  status = "ok";
-};

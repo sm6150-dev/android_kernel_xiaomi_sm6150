@@ -12,6 +12,7 @@
 
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/pinctrl/qcom,pmic-gpio.h>
+#include <dt-bindings/iio/qcom,spmi-vadc.h>
 #include <dt-bindings/input/input.h>
 #include "qcom-base/sdmmagpie-thermal-overlay.dtsi"
 
@@ -89,6 +90,34 @@
 
 &qupv3_se9_i2c {
   #include "qcom-base/smb1390.dtsi"
+};
+
+&pm6150_gpios {
+  smb_stat {
+    smb_stat_default: smb_stat_default {
+      pins = "gpio3";
+      function = "normal";
+      input-enable;
+      bias-pull-up;
+      qcom,pull-up-strength = <PMIC_GPIO_PULL_UP_30>;
+      power-source = <0>;
+    };
+  };
+};
+
+&smb1390 {
+  /delete-property/ interrupts;
+  interrupts = <0x0 0xc2 0x0 IRQ_TYPE_LEVEL_LOW>;
+  pinctrl-names = "default";
+  pinctrl-0 = <&smb_stat_default>;
+  status = "ok";
+};
+
+&smb1390_charger {
+  compatible = "qcom,smb1390-charger-psy";
+  io-channels = <&pm6150l_vadc ADC_AMUX_THM2>;
+  io-channel-names = "cp_die_temp";
+  status = "ok";
 };
 
 &pm6150l_gpios {
