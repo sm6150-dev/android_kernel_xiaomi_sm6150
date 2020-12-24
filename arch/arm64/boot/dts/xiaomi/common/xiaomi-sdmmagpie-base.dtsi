@@ -12,7 +12,6 @@
  */
 
 #include "../qcom-base/sdmmagpie.dtsi"
-#include "xiaomi-sdmmagpie-pmic.dtsi"
 
 &pm6150_vadc {
     /delete-node/ rf_pa0_therm;
