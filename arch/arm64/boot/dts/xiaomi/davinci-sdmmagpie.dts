@@ -1,5 +1,4 @@
 /* Copyright (c) 2018, The Linux Foundation. All rights reserved.
- * Copyright (C) 2020 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -13,11 +12,12 @@
 
 /dts-v1/;
 
-#include "davinci/davinci-sdmmagpie-thermal.dtsi"
+#include "qcom-base/sdmmagpie.dtsi"
+#include "common/xiaomi-sdmmagpie.dtsi"
 #include "davinci/davinci-sdmmagpie.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. SDMMAGPIE PM6150 QRD";
 	compatible = "qcom,sdmmagpie-qrd", "qcom,sdmmagpie", "qcom,qrd";
-	qcom,board-id = <39 0>;
+	qcom,board-id = <0 0>;
 };

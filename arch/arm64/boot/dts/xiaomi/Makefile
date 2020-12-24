@@ -12,8 +12,8 @@ dtbo-$(CONFIG_MACH_XIAOMI_F10) += \
     davinci_m0b-sdmmagpie-overlay.dtbo
 
 davinci-sdmmagpie-overlay.dtbo-base := davinci-sdmmagpie.dtb
-davinci_m0a-sdmmagpie-overlay.dtbo-base := davinci_m0a-sdmmagpie.dtb
-davinci_m0b-sdmmagpie-overlay.dtbo-base := davinci_m0b-sdmmagpie.dtb
+davinci_m0a-sdmmagpie-overlay.dtbo-base := davinci-sdmmagpie.dtb
+davinci_m0b-sdmmagpie-overlay.dtbo-base := davinci-sdmmagpie.dtb
 
 dtbo-$(CONFIG_MACH_XIAOMI_G7B) += phoenix-sdmmagpie-overlay.dtbo
 phoenix-sdmmagpie-overlay.dtbo-base := phoenix-sdmmagpie.dtb

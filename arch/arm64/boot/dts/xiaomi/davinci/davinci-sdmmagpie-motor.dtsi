@@ -6,7 +6,9 @@
  */
 
 /* Front motor */
-&pm6150l_pwm {
+&pm6150l_pwm_1 {
+    reg = <0xbc00 0x200>;
+    qcom,num-lpg-channels = <2>;
     status = "ok";
 };
 
@@ -34,7 +36,7 @@
         cell-index = <0>;
         reg = <0x00 0x00>;
         compatible = "ti,drv8846";
-        pwms = <&pm6150l_pwm 1 1000000>;
+        pwms = <&pm6150l_pwm_1 1 1000000>;
         motor,gpio-mode0 = <&tlmm 91 0x00>;
         motor,gpio-mode1 = <&tlmm 66 0x00>;
         motor,gpio-sleep = <&tlmm 88 0x00>;

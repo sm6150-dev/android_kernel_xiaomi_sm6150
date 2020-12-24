@@ -11,8 +11,6 @@
  * GNU General Public License for more details.
  */
 
-#include "../qcom-base/sdmmagpie.dtsi"
-
 &pm6150_vadc {
     /delete-node/ rf_pa0_therm;
     /delete-node/ rf_pa1_therm;
@@ -155,12 +153,3 @@
     };
 };
 
-&msm_vidc0 {
-    status = "disabled";
-};
-
-&soc {
-    restart@c264000 {
-        qcom,force-warm-reboot;
-    };
-};

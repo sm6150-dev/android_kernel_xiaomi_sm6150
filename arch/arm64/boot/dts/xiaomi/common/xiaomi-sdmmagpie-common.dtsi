@@ -19,6 +19,9 @@
 #include "xiaomi-sdmmagpie-memory.dtsi"
 #include "xiaomi-sdmmagpie-nfc.dtsi"
 #include "xiaomi-sdmmagpie-pinctrl.dtsi"
+#include "xiaomi-sdmmagpie-pm6150.dtsi"
+#include "xiaomi-sdmmagpie-pm6150l.dtsi"
+#include "xiaomi-sdmmagpie-pm8009.dtsi"
 #include "xiaomi-sdmmagpie-regulator.dtsi"
 #include "xiaomi-sdmmagpie-usb.dtsi"
 
@@ -121,5 +124,11 @@
             debounce-interval = <15>;
             gpio-key,wakeup;
         };
+    };
+};
+
+&soc {
+    restart@c264000 {
+        qcom,force-warm-reboot;
     };
 };
