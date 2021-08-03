@@ -1,4 +1,5 @@
 /* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -135,6 +136,12 @@ static int __cam_icp_config_dev_in_ready(struct cam_context *ctx,
 			ctx->dev_name, ctx->ctx_id);
 		rc = -EINVAL;
 		return rc;
+	}
+
+	if ((len < sizeof(struct cam_packet)) ||
+		(cmd->offset >= (len - sizeof(struct cam_packet)))) {
+		CAM_ERR(CAM_CTXT, "Not enough buf");
+		return -EINVAL;
 	}
 
 	packet = (struct cam_packet *) ((uint8_t *)packet_addr +

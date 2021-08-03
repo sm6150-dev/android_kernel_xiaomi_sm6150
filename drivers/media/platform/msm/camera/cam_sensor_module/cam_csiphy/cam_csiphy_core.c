@@ -1,4 +1,5 @@
 /* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -15,6 +16,8 @@
 #include "cam_csiphy_dev.h"
 #include "cam_csiphy_soc.h"
 #include "cam_common_util.h"
+#include "cam_packet_util.h"
+
 
 #include <soc/qcom/scm.h>
 #include <cam_mem_mgr.h>
@@ -165,6 +168,7 @@ int32_t cam_cmd_buf_parser(struct csiphy_device *csiphy_dev,
 	uint32_t                *cmd_buf = NULL;
 	struct cam_csiphy_info  *cam_cmd_csiphy_info = NULL;
 	size_t                  len;
+	size_t                  remain_len;
 
 	if (!cfg_dev || !csiphy_dev) {
 		CAM_ERR(CAM_CSIPHY, "Invalid Args");
@@ -178,16 +182,26 @@ int32_t cam_cmd_buf_parser(struct csiphy_device *csiphy_dev,
 		return rc;
 	}
 
-	if (cfg_dev->offset > len) {
+	remain_len = len;
+	if ((sizeof(struct cam_packet) > len) ||
+		((size_t)cfg_dev->offset >= len - sizeof(struct cam_packet))) {
 		CAM_ERR(CAM_CSIPHY,
-			"offset is out of bounds: offset: %lld len: %zu",
-			cfg_dev->offset, len);
+			"Inval cam_packet strut size: %zu, len_of_buff: %zu",
+			 sizeof(struct cam_packet), len);
 		rc = -EINVAL;
 		goto rel_pkt_buf;
 	}
 
+	remain_len -= (size_t)cfg_dev->offset;
 	csl_packet = (struct cam_packet *)
 		(generic_pkt_ptr + (uint32_t)cfg_dev->offset);
+
+	if (cam_packet_util_validate_packet(csl_packet,
+		remain_len)) {
+		CAM_ERR(CAM_CSIPHY, "Invalid packet params");
+		rc = -EINVAL;
+		goto rel_pkt_buf;
+	}
 
 	cmd_desc = (struct cam_cmd_buf_desc *)
 		((uint32_t *)&csl_packet->payload +
@@ -198,6 +212,14 @@ int32_t cam_cmd_buf_parser(struct csiphy_device *csiphy_dev,
 	if (rc < 0) {
 		CAM_ERR(CAM_CSIPHY,
 			"Failed to get cmd buf Mem address : %d", rc);
+		goto rel_pkt_buf;
+	}
+
+	if ((len < sizeof(struct cam_csiphy_info)) ||
+		(cmd_desc->offset > (len - sizeof(struct cam_csiphy_info)))) {
+		CAM_ERR(CAM_CSIPHY,
+			"Not enough buffer provided for cam_cisphy_info");
+		rc = -EINVAL;
 		goto rel_pkt_buf;
 	}
 
@@ -296,6 +318,32 @@ irqreturn_t cam_csiphy_irq(int irq_num, void *data)
 	cam_io_w_mb(0x0, base + csiphy_reg->mipi_csiphy_glbl_irq_cmd_addr);
 
 	return IRQ_HANDLED;
+}
+
+void cam_csiphy_config_cdr(struct csiphy_device *csiphy_dev)
+{
+	uint32_t     data0 = 0, data1 = 0;
+	uint32_t     cdr_config = 0;
+	void __iomem *mem_base0;
+	void __iomem *mem_base1;
+	void __iomem *csiphybase;
+
+	mem_base0 = ioremap(0x007801a0, 4);
+	mem_base1 = ioremap(0x007801a4, 4);
+
+	csiphybase = csiphy_dev->soc_info.reg_map[0].mem_base;
+
+	data0 = cam_io_r_mb(mem_base0);
+	data1 = cam_io_r_mb(mem_base1);
+
+	if (data0 == 0x12468410 && data1 == 0x08502007)
+		cdr_config = 0x2;
+	else
+		cdr_config = 0x1;
+	CAM_DBG(CAM_CSIPHY, "override cdr to 0x%x", cdr_config);
+	cam_io_w_mb(cdr_config, csiphybase + 0x9B0);
+	cam_io_w_mb(cdr_config, csiphybase + 0xAB0);
+	cam_io_w_mb(cdr_config, csiphybase + 0xBB0);
 }
 
 int32_t cam_csiphy_config_dev(struct csiphy_device *csiphy_dev)
@@ -454,6 +502,8 @@ int32_t cam_csiphy_config_dev(struct csiphy_device *csiphy_dev)
 		lane_mask >>= 1;
 		lane_pos++;
 	}
+	if (csiphy_dev->csiphy_info.csiphy_3phase)
+		cam_csiphy_config_cdr(csiphy_dev);
 
 	cam_csiphy_cphy_irq_config(csiphy_dev);
 
@@ -510,6 +560,9 @@ void cam_csiphy_shutdown(struct csiphy_device *csiphy_dev)
 	csiphy_dev->acquire_count = 0;
 	csiphy_dev->start_dev_count = 0;
 	csiphy_dev->csiphy_state = CAM_CSIPHY_INIT;
+
+	if (csiphy_dev->is_acquired_dev_mipi_switch == 1)
+		csiphy_dev->is_acquired_dev_mipi_switch = 0;
 }
 
 static int32_t cam_csiphy_external_cmd(struct csiphy_device *csiphy_dev,
@@ -578,6 +631,14 @@ int32_t cam_csiphy_core_cfg(void *phy_dev,
 
 		struct cam_create_dev_hdl bridge_params;
 
+		if (csiphy_dev->csiphy_state == CAM_CSIPHY_START) {
+			CAM_ERR(CAM_CSIPHY,
+				"Not in right state to acquire : %d",
+				csiphy_dev->csiphy_state);
+			rc = -EINVAL;
+			goto release_mutex;
+		}
+
 		rc = copy_from_user(&csiphy_acq_dev,
 			u64_to_user_ptr(cmd->handle),
 			sizeof(csiphy_acq_dev));
@@ -587,6 +648,7 @@ int32_t cam_csiphy_core_cfg(void *phy_dev,
 		}
 
 		csiphy_acq_params.combo_mode = 0;
+		csiphy_acq_params.reserved = 0;
 
 		if (copy_from_user(&csiphy_acq_params,
 			u64_to_user_ptr(csiphy_acq_dev.info_handle),
@@ -615,7 +677,8 @@ int32_t cam_csiphy_core_cfg(void *phy_dev,
 
 		if ((csiphy_acq_params.combo_mode != 1) &&
 			(csiphy_dev->is_acquired_dev_combo_mode != 1) &&
-			(csiphy_dev->acquire_count == 1)) {
+			(csiphy_dev->acquire_count == 1) &&
+			(csiphy_acq_params.reserved != 1)) {
 			CAM_ERR(CAM_CSIPHY,
 				"Multiple Acquires are not allowed cm: %d acm: %d",
 				csiphy_acq_params.combo_mode,
@@ -657,6 +720,10 @@ int32_t cam_csiphy_core_cfg(void *phy_dev,
 
 		csiphy_dev->acquire_count++;
 		csiphy_dev->csiphy_state = CAM_CSIPHY_ACQUIRE;
+
+		if (csiphy_acq_params.reserved == 1 &&
+			csiphy_dev->is_acquired_dev_mipi_switch != 1)
+			csiphy_dev->is_acquired_dev_mipi_switch = 1;
 	}
 		break;
 	case CAM_QUERY_CAP: {
@@ -691,6 +758,10 @@ int32_t cam_csiphy_core_cfg(void *phy_dev,
 
 		offset = cam_csiphy_get_instance_offset(csiphy_dev,
 			config.dev_handle);
+
+		if (csiphy_dev->is_acquired_dev_mipi_switch == 1)
+			offset = 0;
+
 		if (offset < 0 || offset >= CSIPHY_MAX_INSTANCES) {
 			CAM_ERR(CAM_CSIPHY, "Invalid offset");
 			goto release_mutex;
@@ -766,8 +837,11 @@ int32_t cam_csiphy_core_cfg(void *phy_dev,
 		csiphy_dev->config_count--;
 		csiphy_dev->acquire_count--;
 
-		if (csiphy_dev->acquire_count == 0)
+		if (csiphy_dev->acquire_count == 0) {
 			csiphy_dev->csiphy_state = CAM_CSIPHY_INIT;
+			/* reset config count */
+			csiphy_dev->config_count = 0;
+		}
 
 		if (csiphy_dev->config_count == 0) {
 			CAM_DBG(CAM_CSIPHY, "reset csiphy_info");
@@ -775,6 +849,9 @@ int32_t cam_csiphy_core_cfg(void *phy_dev,
 			csiphy_dev->csiphy_info.lane_cnt = 0;
 			csiphy_dev->csiphy_info.combo_mode = 0;
 		}
+
+		if (csiphy_dev->is_acquired_dev_mipi_switch == 1)
+			csiphy_dev->is_acquired_dev_mipi_switch = 0;
 	}
 		break;
 	case CAM_CONFIG_DEV: {
@@ -813,6 +890,10 @@ int32_t cam_csiphy_core_cfg(void *phy_dev,
 
 		offset = cam_csiphy_get_instance_offset(csiphy_dev,
 			config.dev_handle);
+
+		if (csiphy_dev->is_acquired_dev_mipi_switch == 1)
+			offset = 0;
+
 		if (offset < 0 || offset >= CSIPHY_MAX_INSTANCES) {
 			CAM_ERR(CAM_CSIPHY, "Invalid offset");
 			goto release_mutex;
@@ -827,6 +908,8 @@ int32_t cam_csiphy_core_cfg(void *phy_dev,
 			&ahb_vote, &axi_vote);
 		if (rc < 0) {
 			CAM_ERR(CAM_CSIPHY, "voting CPAS: %d", rc);
+			if (rc == -EALREADY)
+				cam_cpas_stop(csiphy_dev->cpas_handle);
 			goto release_mutex;
 		}
 
@@ -837,6 +920,7 @@ int32_t cam_csiphy_core_cfg(void *phy_dev,
 			if (rc < 0) {
 				csiphy_dev->csiphy_info.secure_mode[offset] =
 					CAM_SECURE_MODE_NON_SECURE;
+				cam_cpas_stop(csiphy_dev->cpas_handle);
 				goto release_mutex;
 			}
 		}

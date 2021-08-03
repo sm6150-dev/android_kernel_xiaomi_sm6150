@@ -1,4 +1,5 @@
-/* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -127,6 +128,10 @@ static struct cam_vfe_top_ver2_reg_offset_common vfe170_top_common_reg = {
 	.three_D_cfg              = 0x00000054,
 	.violation_status         = 0x0000007C,
 	.reg_update_cmd           = 0x000004AC,
+	.irq_mask_0               = 0x0000005C,
+	.irq_mask_1               = 0x00000060,
+	.irq_status_0             = 0x0000006C,
+	.irq_status_1             = 0x00000070,
 };
 
 static struct cam_vfe_rdi_ver2_reg vfe170_rdi_reg = {
@@ -827,6 +832,12 @@ static struct cam_vfe_bus_ver2_hw_info vfe170_bus_hw_info = {
 			.max_width     = -1,
 			.max_height    = -1,
 		},
+	},
+	.reg_data = {
+		.ubwc_10bit_threshold_lossy_0 = 0,
+		.ubwc_10bit_threshold_lossy_1 = 0,
+		.ubwc_8bit_threshold_lossy_0 = 0,
+		.ubwc_8bit_threshold_lossy_1 = 0,
 	},
 };
 

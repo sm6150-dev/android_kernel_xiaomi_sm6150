@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -544,6 +544,7 @@ static int get_hfi_extradata_index(enum hal_extradata_id index)
 		break;
 	case HAL_EXTRADATA_ASPECT_RATIO:
 	case HAL_EXTRADATA_OUTPUT_CROP:
+	case HAL_EXTRADATA_INPUT_CROP:
 		ret = HFI_PROPERTY_PARAM_INDEX_EXTRADATA;
 		break;
 	case HAL_EXTRADATA_MPEG2_SEQDISP:
@@ -552,8 +553,11 @@ static int get_hfi_extradata_index(enum hal_extradata_id index)
 	case HAL_EXTRADATA_STREAM_USERDATA:
 		ret = HFI_PROPERTY_PARAM_VDEC_STREAM_USERDATA_EXTRADATA;
 		break;
-	case HAL_EXTRADATA_FRAME_QP:
+	case HAL_EXTRADATA_DEC_FRAME_QP:
 		ret = HFI_PROPERTY_PARAM_VDEC_FRAME_QP_EXTRADATA;
+		break;
+	case HAL_EXTRADATA_ENC_FRAME_QP:
+		ret = HFI_PROPERTY_PARAM_VENC_FRAME_QP_EXTRADATA;
 		break;
 	case HAL_EXTRADATA_LTR_INFO:
 		ret = HFI_PROPERTY_PARAM_VENC_LTR_INFO;
@@ -580,6 +584,9 @@ static int get_hfi_extradata_index(enum hal_extradata_id index)
 	case HAL_EXTRADATA_HDR10PLUS_METADATA:
 		ret = HFI_PROPERTY_PARAM_VENC_HDR10PLUS_METADATA_EXTRADATA;
 		break;
+	case HAL_EXTRADATA_ENC_DTS_METADATA:
+		ret = HFI_PROPERTY_PARAM_VENC_DTS_INFO;
+		break;
 	default:
 		dprintk(VIDC_WARN, "Extradata index not found: %d\n", index);
 		break;
@@ -597,6 +604,9 @@ static int get_hfi_extradata_id(enum hal_extradata_id index)
 		break;
 	case HAL_EXTRADATA_OUTPUT_CROP:
 		ret = MSM_VIDC_EXTRADATA_OUTPUT_CROP;
+		break;
+	case HAL_EXTRADATA_INPUT_CROP:
+		ret = MSM_VIDC_EXTRADATA_INPUT_CROP;
 		break;
 	default:
 		ret = get_hfi_extradata_index(index);
@@ -828,7 +838,7 @@ int create_pkt_cmd_session_etb_decoder(
 	pkt->offset = input_frame->offset;
 	pkt->alloc_len = input_frame->alloc_len;
 	pkt->filled_len = input_frame->filled_len;
-	pkt->input_tag = input_frame->clnt_data;
+	pkt->input_tag = input_frame->input_tag;
 	pkt->packet_buffer = (u32)input_frame->device_addr;
 
 	trace_msm_v4l2_vidc_buffer_event_start("ETB",
@@ -863,7 +873,7 @@ int create_pkt_cmd_session_etb_encoder(
 	pkt->offset = input_frame->offset;
 	pkt->alloc_len = input_frame->alloc_len;
 	pkt->filled_len = input_frame->filled_len;
-	pkt->input_tag = input_frame->clnt_data;
+	pkt->input_tag = input_frame->input_tag;
 	pkt->packet_buffer = (u32)input_frame->device_addr;
 	pkt->extra_data_buffer = (u32)input_frame->extradata_addr;
 
@@ -899,6 +909,7 @@ int create_pkt_cmd_session_ftb(struct hfi_cmd_session_fill_buffer_packet *pkt,
 		return -EINVAL;
 
 	pkt->packet_buffer = (u32)output_frame->device_addr;
+	pkt->output_tag = output_frame->output_tag;
 	pkt->extra_data_buffer = (u32)output_frame->extradata_addr;
 	pkt->alloc_len = output_frame->alloc_len;
 	pkt->filled_len = output_frame->filled_len;
@@ -2102,6 +2113,40 @@ int create_pkt_cmd_sys_image_version(
 	return 0;
 }
 
+int create_pkt_cmd_sys_ubwc_config(struct hfi_cmd_sys_set_property_packet *pkt,
+		struct msm_vidc_ubwc_config *config)
+{
+	if (!pkt) {
+		dprintk(VIDC_ERR, "%s invalid param :%pK\n", __func__, pkt);
+		return -EINVAL;
+	}
+
+	pkt->size = sizeof(struct hfi_cmd_sys_set_property_packet) +
+		config->nSize + sizeof(u32);
+	pkt->packet_type = HFI_CMD_SYS_SET_PROPERTY;
+	pkt->num_properties = 1;
+	pkt->rg_property_data[0] = HFI_PROPERTY_SYS_UBWC_CONFIG;
+
+	if (config->nSize == sizeof(struct msm_vidc_ubwc_config))
+		memcpy(&pkt->rg_property_data[1], config, config->nSize);
+	else
+		memcpy(&pkt->rg_property_data[1], &(config->v1), config->nSize);
+
+	dprintk(VIDC_DBG,
+		"UBWC config nSize: %u, MaxChannels: %u, MalLength: %u, %u, HBB: %u\n",
+		config->nSize,
+		config->v1.nMaxChannels,
+		config->v1.nMalLength,
+		config->v1.nHighestBankBit);
+	dprintk(VIDC_DBG,
+		"MaxChannelsOverride: %u, MalLengthOverride: %u, HBBOverride: %u\n",
+		config->v1.sOverrideBitInfo.bMaxChannelsOverride,
+		config->v1.sOverrideBitInfo.bMalLengthOverride,
+		config->v1.sOverrideBitInfo.bHBBOverride);
+
+	return 0;
+}
+
 int create_pkt_cmd_session_sync_process(
 		struct hfi_cmd_session_sync_process_packet *pkt,
 		struct hal_session *session)
@@ -2129,6 +2174,7 @@ static struct hfi_packetization_ops hfi_default = {
 	.sys_ping = create_pkt_cmd_sys_ping,
 	.sys_image_version = create_pkt_cmd_sys_image_version,
 	.ssr_cmd = create_pkt_ssr_cmd,
+	.sys_ubwc_config = create_pkt_cmd_sys_ubwc_config,
 	.session_init = create_pkt_cmd_sys_session_init,
 	.session_cmd = create_pkt_cmd_session_cmd,
 	.session_set_buffers = create_pkt_cmd_session_set_buffers,

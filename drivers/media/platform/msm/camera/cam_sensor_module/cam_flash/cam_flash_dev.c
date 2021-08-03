@@ -1,4 +1,5 @@
 /* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -181,6 +182,7 @@ static int32_t cam_flash_driver_cmd(struct cam_flash_ctrl *fctrl,
 			goto release_mutex;
 		}
 
+		cam_flash_off(fctrl);
 		fctrl->func_tbl.flush_req(fctrl, FLUSH_ALL, 0);
 		fctrl->last_flush_req = 0;
 		fctrl->flash_state = CAM_FLASH_STATE_ACQUIRE;
@@ -319,7 +321,14 @@ static int cam_flash_platform_remove(struct platform_device *pdev)
 		return 0;
 	}
 
-	devm_kfree(&pdev->dev, fctrl);
+	CAM_INFO(CAM_FLASH, "Platform remove invoked");
+	mutex_lock(&fctrl->flash_mutex);
+	cam_flash_shutdown(fctrl);
+	mutex_unlock(&fctrl->flash_mutex);
+	cam_unregister_subdev(&(fctrl->v4l2_dev_str));
+	platform_set_drvdata(pdev, NULL);
+	v4l2_set_subdevdata(&fctrl->v4l2_dev_str.sd, NULL);
+	kfree(fctrl);
 
 	return 0;
 }
@@ -333,6 +342,8 @@ static int32_t cam_flash_i2c_driver_remove(struct i2c_client *client)
 		CAM_ERR(CAM_FLASH, "Flash device is NULL");
 		return -EINVAL;
 	}
+
+	CAM_INFO(CAM_FLASH, "i2c driver remove invoked");
 	/*Free Allocated Mem */
 	kfree(fctrl->i2c_data.per_frame);
 	fctrl->i2c_data.per_frame = NULL;
@@ -531,6 +542,7 @@ static int32_t cam_flash_i2c_driver_probe(struct i2c_client *client,
 
 	i2c_set_clientdata(client, fctrl);
 
+	fctrl->of_node = client->dev.of_node;
 	fctrl->io_master_info.client = client;
 	fctrl->soc_info.dev = &client->dev;
 	fctrl->soc_info.dev_name = client->name;
@@ -561,7 +573,11 @@ static int32_t cam_flash_i2c_driver_probe(struct i2c_client *client,
 		INIT_LIST_HEAD(&(fctrl->i2c_data.per_frame[i].list_head));
 
 	fctrl->func_tbl.parser = cam_flash_i2c_pkt_parser;
+#ifdef CONFIG_SOFTLED_CAMERA
+	fctrl->func_tbl.apply_setting = cam_softflash_i2c_apply_setting;
+#else
 	fctrl->func_tbl.apply_setting = cam_flash_i2c_apply_setting;
+#endif
 	fctrl->func_tbl.power_ops = cam_flash_i2c_power_ops;
 	fctrl->func_tbl.flush_req = cam_flash_i2c_flush_request;
 
@@ -618,9 +634,8 @@ static int32_t __init cam_flash_init_module(void)
 	int32_t rc = 0;
 
 	rc = platform_driver_register(&cam_flash_platform_driver);
-	if (rc == 0) {
-		CAM_DBG(CAM_FLASH, "platform probe success");
-		return 0;
+	if (rc) {
+		CAM_ERR(CAM_FLASH, "platform probe failed rc: %d", rc);
 	}
 
 	rc = i2c_add_driver(&cam_flash_i2c_driver);

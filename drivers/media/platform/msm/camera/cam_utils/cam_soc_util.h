@@ -1,4 +1,5 @@
 /* Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -36,7 +37,7 @@
 #define CAM_SOC_MAX_BASE            CAM_SOC_MAX_BLOCK
 
 /* maximum number of device regulator */
-#define CAM_SOC_MAX_REGULATOR       5
+#define CAM_SOC_MAX_REGULATOR       10
 
 /* maximum number of device clock */
 #define CAM_SOC_MAX_CLK             32
@@ -390,7 +391,7 @@ int cam_soc_util_set_clk_flags(struct cam_hw_soc_info *soc_info,
  * @return:             success or failure
  */
 int cam_soc_util_set_src_clk_rate(struct cam_hw_soc_info *soc_info,
-	int32_t clk_rate);
+	int64_t clk_rate);
 
 /**
  * cam_soc_util_get_option_clk_by_name()

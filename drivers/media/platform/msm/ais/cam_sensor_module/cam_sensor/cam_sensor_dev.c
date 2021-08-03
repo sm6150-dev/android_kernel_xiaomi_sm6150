@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -14,6 +14,21 @@
 #include "cam_req_mgr_dev.h"
 #include "cam_sensor_soc.h"
 #include "cam_sensor_core.h"
+
+
+static int cam_sensor_subdev_subscribe_event(struct v4l2_subdev *sd,
+	struct v4l2_fh *fh,
+	struct v4l2_event_subscription *sub)
+{
+	return v4l2_event_subscribe(fh, sub, CAM_SUBDEVICE_EVENT_MAX, NULL);
+}
+
+static int cam_sensor_subdev_unsubscribe_event(struct v4l2_subdev *sd,
+	struct v4l2_fh *fh,
+	struct v4l2_event_subscription *sub)
+{
+	return v4l2_event_unsubscribe(fh, sub);
+}
 
 static long cam_sensor_subdev_ioctl(struct v4l2_subdev *sd,
 	unsigned int cmd, void *arg)
@@ -97,6 +112,8 @@ static struct v4l2_subdev_core_ops cam_sensor_subdev_core_ops = {
 	.compat_ioctl32 = cam_sensor_init_subdev_do_ioctl,
 #endif
 	.s_power = cam_sensor_power,
+	.subscribe_event = cam_sensor_subdev_subscribe_event,
+	.unsubscribe_event = cam_sensor_subdev_unsubscribe_event,
 };
 
 static struct v4l2_subdev_ops cam_sensor_subdev_ops = {
@@ -162,6 +179,7 @@ static int32_t cam_sensor_driver_i2c_probe(struct i2c_client *client,
 	s_ctrl->of_node = client->dev.of_node;
 	s_ctrl->io_master_info.master_type = I2C_MASTER;
 	s_ctrl->is_probe_succeed = 0;
+	s_ctrl->last_flush_req = 0;
 
 	rc = cam_sensor_parse_dt(s_ctrl);
 	if (rc < 0) {
@@ -191,13 +209,14 @@ static int32_t cam_sensor_driver_i2c_probe(struct i2c_client *client,
 		INIT_LIST_HEAD(&(s_ctrl->i2c_data.per_frame[i].list_head));
 
 	s_ctrl->bridge_intf.device_hdl = -1;
+	s_ctrl->bridge_intf.link_hdl = -1;
 	s_ctrl->bridge_intf.ops.get_dev_info = cam_sensor_publish_dev_info;
 	s_ctrl->bridge_intf.ops.link_setup = cam_sensor_establish_link;
 	s_ctrl->bridge_intf.ops.apply_req = cam_sensor_apply_request;
 	s_ctrl->bridge_intf.ops.flush_req = cam_sensor_flush_request;
 
 	s_ctrl->sensordata->power_info.dev = soc_info->dev;
-	v4l2_set_subdevdata(&(s_ctrl->v4l2_dev_str.sd), s_ctrl);
+
 	return rc;
 unreg_subdev:
 	cam_unregister_subdev(&(s_ctrl->v4l2_dev_str));
@@ -218,11 +237,18 @@ static int cam_sensor_platform_remove(struct platform_device *pdev)
 		return 0;
 	}
 
+	CAM_INFO(CAM_SENSOR, "platform remove invoked");
+	mutex_lock(&(s_ctrl->cam_sensor_mutex));
+	cam_sensor_shutdown(s_ctrl);
+	mutex_unlock(&(s_ctrl->cam_sensor_mutex));
+	cam_unregister_subdev(&(s_ctrl->v4l2_dev_str));
 	soc_info = &s_ctrl->soc_info;
 	for (i = 0; i < soc_info->num_clk; i++)
 		devm_clk_put(soc_info->dev, soc_info->clk[i]);
 
 	kfree(s_ctrl->i2c_data.per_frame);
+	platform_set_drvdata(pdev, NULL);
+	v4l2_set_subdevdata(&(s_ctrl->v4l2_dev_str.sd), NULL);
 	devm_kfree(&pdev->dev, s_ctrl);
 
 	return 0;
@@ -239,11 +265,17 @@ static int cam_sensor_driver_i2c_remove(struct i2c_client *client)
 		return 0;
 	}
 
+	CAM_INFO(CAM_SENSOR, "i2c remove invoked");
+	mutex_lock(&(s_ctrl->cam_sensor_mutex));
+	cam_sensor_shutdown(s_ctrl);
+	mutex_unlock(&(s_ctrl->cam_sensor_mutex));
+	cam_unregister_subdev(&(s_ctrl->v4l2_dev_str));
 	soc_info = &s_ctrl->soc_info;
 	for (i = 0; i < soc_info->num_clk; i++)
 		devm_clk_put(soc_info->dev, soc_info->clk[i]);
 
 	kfree(s_ctrl->i2c_data.per_frame);
+	v4l2_set_subdevdata(&(s_ctrl->v4l2_dev_str.sd), NULL);
 	kfree(s_ctrl);
 
 	return 0;
@@ -275,6 +307,7 @@ static int32_t cam_sensor_driver_platform_probe(
 	/* Initialize sensor device type */
 	s_ctrl->of_node = pdev->dev.of_node;
 	s_ctrl->is_probe_succeed = 0;
+	s_ctrl->last_flush_req = 0;
 
 	/*fill in platform device*/
 	s_ctrl->pdev = pdev;
@@ -312,6 +345,7 @@ static int32_t cam_sensor_driver_platform_probe(
 		INIT_LIST_HEAD(&(s_ctrl->i2c_data.per_frame[i].list_head));
 
 	s_ctrl->bridge_intf.device_hdl = -1;
+	s_ctrl->bridge_intf.link_hdl = -1;
 	s_ctrl->bridge_intf.ops.get_dev_info = cam_sensor_publish_dev_info;
 	s_ctrl->bridge_intf.ops.link_setup = cam_sensor_establish_link;
 	s_ctrl->bridge_intf.ops.apply_req = cam_sensor_apply_request;
@@ -319,8 +353,6 @@ static int32_t cam_sensor_driver_platform_probe(
 
 	s_ctrl->sensordata->power_info.dev = &pdev->dev;
 	platform_set_drvdata(pdev, s_ctrl);
-	v4l2_set_subdevdata(&(s_ctrl->v4l2_dev_str.sd), s_ctrl);
-
 	s_ctrl->sensor_state = CAM_SENSOR_INIT;
 
 	return rc;

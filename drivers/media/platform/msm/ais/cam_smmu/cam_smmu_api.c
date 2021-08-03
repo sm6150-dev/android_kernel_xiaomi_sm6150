@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -24,10 +24,11 @@
 #include <soc/qcom/scm.h>
 #include <soc/qcom/secure_buffer.h>
 #include <uapi/media/cam_req_mgr.h>
+#include <linux/debugfs.h>
 #include "cam_smmu_api.h"
 #include "cam_debug_util.h"
 
-#define SHARED_MEM_POOL_GRANULARITY 12
+#define SHARED_MEM_POOL_GRANULARITY 16
 
 #define IOMMU_INVALID_DIR -1
 #define BYTE_SIZE 8
@@ -35,7 +36,7 @@
 #define COOKIE_SIZE (BYTE_SIZE*COOKIE_NUM_BYTE)
 #define COOKIE_MASK ((1<<COOKIE_SIZE)-1)
 #define HANDLE_INIT (-1)
-#define CAM_SMMU_CB_MAX 5
+#define CAM_SMMU_CB_MAX 8
 
 #define GET_SMMU_HDL(x, y) (((x) << COOKIE_SIZE) | ((y) & COOKIE_MASK))
 #define GET_SMMU_TABLE_IDX(x) (((x) >> COOKIE_SIZE) & COOKIE_MASK)
@@ -104,7 +105,10 @@ struct cam_context_bank_info {
 	dma_addr_t va_start;
 	size_t va_len;
 	const char *name;
+	/* stage 2 only */
 	bool is_secure;
+	/* stage 1 */
+	bool is_secure_pixel;
 	uint8_t scratch_buf_support;
 	uint8_t firmware_support;
 	uint8_t shared_support;
@@ -185,6 +189,10 @@ struct cam_sec_buff_info {
 static const char *qdss_region_name = "qdss";
 
 static struct cam_iommu_cb_set iommu_cb_set;
+
+static struct dentry *smmu_dentry;
+
+static bool smmu_fatal_flag = true;
 
 static enum dma_data_direction cam_smmu_translate_dir(
 	enum cam_smmu_map_dir dir);
@@ -293,6 +301,30 @@ static void cam_smmu_page_fault_work(struct work_struct *work)
 		}
 	}
 	kfree(payload);
+}
+
+static int cam_smmu_create_debugfs_entry(void)
+{
+	int rc = 0;
+
+	smmu_dentry = debugfs_create_dir("camera_smmu", NULL);
+	if (!smmu_dentry)
+		return -ENOMEM;
+
+	if (!debugfs_create_bool("cam_smmu_fatal",
+		0644,
+		smmu_dentry,
+		&smmu_fatal_flag)) {
+		CAM_ERR(CAM_SMMU, "failed to create cam_smmu_fatal entry");
+		rc = -ENOMEM;
+		goto err;
+	}
+
+	return rc;
+err:
+	debugfs_remove_recursive(smmu_dentry);
+	smmu_dentry = NULL;
+	return rc;
 }
 
 static void cam_smmu_print_user_list(int idx)
@@ -424,7 +456,7 @@ void cam_smmu_set_client_page_fault_handler(int handle,
 	if (handler_cb) {
 		if (iommu_cb_set.cb_info[idx].cb_count == CAM_SMMU_CB_MAX) {
 			CAM_ERR(CAM_SMMU,
-				"%s Should not regiester more handlers",
+				"%s Should not register more handlers",
 				iommu_cb_set.cb_info[idx].name);
 			mutex_unlock(&iommu_cb_set.cb_info[idx].lock);
 			return;
@@ -530,7 +562,7 @@ static int cam_smmu_iommu_fault_handler(struct iommu_domain *domain,
 	}
 
 	if (++iommu_cb_set.cb_info[idx].pf_count > g_num_pf_handled) {
-		CAM_INFO(CAM_SMMU, "PF already handled %d %d %d",
+		CAM_INFO_RATE_LIMIT(CAM_SMMU, "PF already handled %d %d %d",
 			g_num_pf_handled, idx,
 			iommu_cb_set.cb_info[idx].pf_count);
 		return -EINVAL;
@@ -680,11 +712,6 @@ static int cam_smmu_create_add_handle_in_table(char *name,
 		if (!strcmp(iommu_cb_set.cb_info[i].name, name)) {
 			mutex_lock(&iommu_cb_set.cb_info[i].lock);
 			if (iommu_cb_set.cb_info[i].handle != HANDLE_INIT) {
-				CAM_ERR(CAM_SMMU,
-					"Error: %s already got handle 0x%x",
-					name,
-					iommu_cb_set.cb_info[i].handle);
-
 				if (iommu_cb_set.cb_info[i].is_secure)
 					iommu_cb_set.cb_info[i].secure_count++;
 
@@ -693,7 +720,13 @@ static int cam_smmu_create_add_handle_in_table(char *name,
 					*hdl = iommu_cb_set.cb_info[i].handle;
 					return 0;
 				}
-				return -EINVAL;
+
+				CAM_DBG(CAM_SMMU,
+					"%s already got handle 0x%x",
+					name, iommu_cb_set.cb_info[i].handle);
+
+				*hdl = iommu_cb_set.cb_info[i].handle;
+				return 0;
 			}
 
 			/* make sure handle is unique */
@@ -1087,7 +1120,7 @@ get_addr_end:
 
 int cam_smmu_alloc_firmware(int32_t smmu_hdl,
 	dma_addr_t *iova,
-	uint64_t *cpuva,
+	uintptr_t *cpuva,
 	size_t *len)
 {
 	int rc;
@@ -1156,7 +1189,7 @@ int cam_smmu_alloc_firmware(int32_t smmu_hdl,
 	iommu_cb_set.cb_info[idx].is_fw_allocated = true;
 
 	*iova = iommu_cb_set.cb_info[idx].firmware_info.iova_start;
-	*cpuva = (uint64_t)icp_fw.fw_kva;
+	*cpuva = (uintptr_t)icp_fw.fw_kva;
 	*len = firmware_len;
 	mutex_unlock(&iommu_cb_set.cb_info[idx].lock);
 
@@ -1372,6 +1405,42 @@ end:
 	return rc;
 }
 EXPORT_SYMBOL(cam_smmu_dealloc_qdss);
+
+int cam_smmu_get_io_region_info(int32_t smmu_hdl,
+	dma_addr_t *iova, size_t *len)
+{
+	int32_t idx;
+
+	if (!iova || !len || (smmu_hdl == HANDLE_INIT)) {
+		CAM_ERR(CAM_SMMU, "Error: Input args are invalid");
+		return -EINVAL;
+	}
+
+	idx = GET_SMMU_TABLE_IDX(smmu_hdl);
+	if (idx < 0 || idx >= iommu_cb_set.cb_num) {
+		CAM_ERR(CAM_SMMU,
+			"Error: handle or index invalid. idx = %d hdl = %x",
+			idx, smmu_hdl);
+		return -EINVAL;
+	}
+
+	if (!iommu_cb_set.cb_info[idx].io_support) {
+		CAM_ERR(CAM_SMMU,
+			"I/O memory not supported for this SMMU handle");
+		return -EINVAL;
+	}
+
+	mutex_lock(&iommu_cb_set.cb_info[idx].lock);
+	*iova = iommu_cb_set.cb_info[idx].io_info.iova_start;
+	*len = iommu_cb_set.cb_info[idx].io_info.iova_len;
+
+	CAM_DBG(CAM_SMMU,
+		"I/O area for hdl = %x start addr = %pK len = %zu",
+		smmu_hdl, *iova, *len);
+	mutex_unlock(&iommu_cb_set.cb_info[idx].lock);
+
+	return 0;
+}
 
 int cam_smmu_get_region_info(int32_t smmu_hdl,
 	enum cam_smmu_region_id region_id,
@@ -1923,6 +1992,25 @@ static enum cam_smmu_buf_state cam_smmu_check_dma_buf_in_list(int idx,
 static enum cam_smmu_buf_state cam_smmu_check_secure_fd_in_list(int idx,
 					int ion_fd, dma_addr_t *paddr_ptr,
 					size_t *len_ptr)
+{
+	struct cam_sec_buff_info *mapping;
+
+	list_for_each_entry(mapping,
+			&iommu_cb_set.cb_info[idx].smmu_buf_list,
+			list) {
+		if (mapping->ion_fd == ion_fd) {
+			*paddr_ptr = mapping->paddr;
+			*len_ptr = mapping->len;
+			mapping->ref_count++;
+			return CAM_SMMU_BUFF_EXIST;
+		}
+	}
+
+	return CAM_SMMU_BUFF_NOT_EXIST;
+}
+
+static enum cam_smmu_buf_state cam_smmu_validate_secure_fd_in_list(int idx,
+	int ion_fd, dma_addr_t *paddr_ptr, size_t *len_ptr)
 {
 	struct cam_sec_buff_info *mapping;
 
@@ -2540,6 +2628,16 @@ int cam_smmu_unmap_stage2_iova(int handle, int ion_fd)
 		goto put_addr_end;
 	}
 
+	mapping_info->ref_count--;
+	if (mapping_info->ref_count > 0) {
+		CAM_DBG(CAM_SMMU,
+			"idx: %d fd = %d ref_count: %d",
+			idx, ion_fd, mapping_info->ref_count);
+		rc = 0;
+		goto put_addr_end;
+	}
+	mapping_info->ref_count = 0;
+
 	/* unmapping one buffer from device */
 	rc = cam_smmu_secure_unmap_buf_and_remove_from_list(mapping_info, idx);
 	if (rc) {
@@ -2815,7 +2913,7 @@ int cam_smmu_get_stage2_iova(int handle, int ion_fd,
 		goto get_addr_end;
 	}
 
-	buf_state = cam_smmu_check_secure_fd_in_list(idx,
+	buf_state = cam_smmu_validate_secure_fd_in_list(idx,
 		ion_fd,
 		paddr_ptr,
 		len_ptr);
@@ -3111,7 +3209,7 @@ static int cam_smmu_setup_cb(struct cam_context_bank_info *cb,
 	cb->is_fw_allocated = false;
 	cb->is_secheap_allocated = false;
 
-	/* Create a pool with 4K granularity for supporting shared memory */
+	/* Create a pool with 64K granularity for supporting shared memory */
 	if (cb->shared_support) {
 		cb->shared_mem_pool = gen_pool_create(
 			SHARED_MEM_POOL_GRANULARITY, -1);
@@ -3160,7 +3258,7 @@ static int cam_smmu_setup_cb(struct cam_context_bank_info *cb,
 			goto end;
 		}
 
-		iommu_cb_set.non_fatal_fault = 1;
+		iommu_cb_set.non_fatal_fault = smmu_fatal_flag;
 		if (iommu_domain_set_attr(cb->mapping->domain,
 			DOMAIN_ATTR_NON_FATAL_FAULTS,
 			&iommu_cb_set.non_fatal_fault) < 0) {
@@ -3172,6 +3270,20 @@ static int cam_smmu_setup_cb(struct cam_context_bank_info *cb,
 		CAM_ERR(CAM_SMMU, "Context bank does not have IO region");
 		rc = -ENODEV;
 		goto end;
+	}
+
+	if (cb->is_secure_pixel) {
+		int secure_vmid = VMID_CP_PIXEL;
+
+		rc = iommu_domain_set_attr(cb->mapping->domain,
+				DOMAIN_ATTR_SECURE_VMID, &secure_vmid);
+		if (rc) {
+			CAM_ERR(CAM_SMMU,
+				"programming secure vmid failed: %s %d",
+				dev_name(dev), rc);
+			rc = -ENODEV;
+			goto end;
+		}
 	}
 
 	return rc;
@@ -3249,6 +3361,10 @@ static int cam_smmu_get_memory_regions_info(struct device_node *of_node,
 
 	mem_map_node = of_get_child_by_name(of_node, "iova-mem-map");
 	cb->is_secure = of_property_read_bool(of_node, "qcom,secure-cb");
+
+	if (!cb->is_secure)
+		cb->is_secure_pixel = of_property_read_bool(of_node,
+			"qcom,secure-pixel-cb");
 
 	/*
 	 * We always expect a memory map node, except when it is a secure
@@ -3511,6 +3627,7 @@ static struct platform_driver cam_smmu_driver = {
 
 static int __init cam_smmu_init_module(void)
 {
+	cam_smmu_create_debugfs_entry();
 	return platform_driver_register(&cam_smmu_driver);
 }
 

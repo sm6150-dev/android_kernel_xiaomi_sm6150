@@ -1,4 +1,5 @@
 /* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -42,7 +43,10 @@ static void cam_lrme_hw_util_fill_fe_reg(struct cam_lrme_hw_io_buffer *io_buf,
 	uint32_t reg_val;
 
 	/* 1. config buffer size */
-	reg_val = io_buf->io_cfg->planes[0].width;
+	if (io_buf->io_cfg->format == CAM_FORMAT_PLAIN16_10)
+		reg_val = io_buf->io_cfg->planes[0].width * 2;
+	else
+		reg_val = io_buf->io_cfg->planes[0].width;
 	reg_val |= (io_buf->io_cfg->planes[0].height << 16);
 	cam_lrme_cdm_write_reg_val_pair(reg_val_pair, num_cmd,
 		hw_info->bus_rd_reg.bus_client_reg[index].rd_buffer_size,
@@ -736,6 +740,11 @@ int cam_lrme_hw_process_irq(void *priv, void *data)
 
 	mutex_lock(&lrme_hw->hw_mutex);
 
+	if (lrme_hw->hw_state == CAM_HW_STATE_POWER_DOWN) {
+		CAM_DBG(CAM_LRME, "LRME HW is in off state");
+		goto end;
+	}
+
 	if (top_irq_status & (1 << 3)) {
 		CAM_DBG(CAM_LRME, "Error");
 		rc = cam_lrme_hw_util_process_err(lrme_hw);
@@ -947,7 +956,8 @@ int cam_lrme_hw_submit_req(void *hw_priv, void *hw_submit_args,
 
 	if (lrme_core->req_submit != NULL) {
 		CAM_ERR(CAM_LRME, "req_submit is not NULL");
-		return -EBUSY;
+		rc = -EBUSY;
+		goto error;
 	}
 
 	rc = cam_lrme_hw_util_submit_req(lrme_core, frame_req);

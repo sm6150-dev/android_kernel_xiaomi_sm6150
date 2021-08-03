@@ -1,4 +1,5 @@
 /* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -35,6 +36,13 @@ typedef int (*cam_hw_event_cb_func)(void *context, uint32_t evt_id,
 /* hardware page fault callback function type */
 typedef int (*cam_hw_pagefault_cb_func)(void *context, unsigned long iova,
 	uint32_t buf_info);
+
+
+#define DMI_BL 1
+#define CMD_BL 2
+#define IOCFG_BL 3
+#define CHNG_BASE_BL 4
+#define REG_UPD_BL 5
 
 /**
  * struct cam_hw_update_entry - Entry for hardware config
@@ -153,6 +161,7 @@ struct cam_hw_mgr_dump_pf_data {
  * struct cam_hw_prepare_update_args - Payload for prepare command
  *
  * @packet:                CSL packet from user mode driver
+ * @remain_len             Remaining length of CPU buffer after config offset
  * @ctxt_to_hw_map:        HW context from the acquire
  * @max_hw_update_entries: Maximum hardware update entries supported
  * @hw_update_entries:     Actual hardware update configuration (returned)
@@ -169,6 +178,7 @@ struct cam_hw_mgr_dump_pf_data {
  */
 struct cam_hw_prepare_update_args {
 	struct cam_packet              *packet;
+	size_t                          remain_len;
 	void                           *ctxt_to_hw_map;
 	uint32_t                        max_hw_update_entries;
 	struct cam_hw_update_entry     *hw_update_entries;
@@ -218,6 +228,7 @@ struct cam_hw_config_args {
 	void                           *priv;
 	uint64_t                        request_id;
 	bool                            init_packet;
+	bool				reapply;
 };
 
 /**
@@ -229,6 +240,8 @@ struct cam_hw_config_args {
  * @num_req_active:        Num request to flush, valid when flush type is REQ
  * @flush_req_active:      Request active pointers to flush
  * @flush_type:            The flush type
+ * @last_flush_req:        last flush req_id notified to hw_mgr for the
+ *                         given stream
  *
  */
 struct cam_hw_flush_args {
@@ -238,6 +251,7 @@ struct cam_hw_flush_args {
 	uint32_t                        num_req_active;
 	void                           *flush_req_active[20];
 	enum flush_type_t               flush_type;
+	uint32_t                        last_flush_req;
 };
 
 /**

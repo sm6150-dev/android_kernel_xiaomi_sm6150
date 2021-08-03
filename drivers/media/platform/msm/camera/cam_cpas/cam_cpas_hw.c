@@ -1,4 +1,5 @@
 /* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -313,6 +314,9 @@ static int cam_cpas_util_axi_setup(struct cam_cpas *cpas_core,
 			goto mnoc_node_get_fail;
 		}
 		axi_port->axi_port_mnoc_node = axi_port_mnoc_node;
+		axi_port->ib_bw_voting_needed =
+			of_property_read_bool(axi_port_node,
+				"ib-bw-voting-needed");
 
 		rc = cam_cpas_util_register_bus_client(soc_info,
 			axi_port_mnoc_node, &axi_port->mnoc_bus);
@@ -565,7 +569,7 @@ static int cam_cpas_util_set_camnoc_axi_clk_rate(
 		struct cam_cpas_axi_port *curr_axi_port = NULL;
 		struct cam_cpas_axi_port *temp_axi_port = NULL;
 		uint64_t required_camnoc_bw = 0;
-		int32_t clk_rate = 0;
+		int64_t clk_rate = 0;
 
 		list_for_each_entry_safe(curr_axi_port, temp_axi_port,
 			&cpas_core->axi_ports_list_head, sibling_port) {
@@ -593,13 +597,13 @@ static int cam_cpas_util_set_camnoc_axi_clk_rate(
 
 		clk_rate = required_camnoc_bw / soc_private->camnoc_bus_width;
 
-		CAM_DBG(CAM_CPAS, "Setting camnoc axi clk rate : %llu %d",
+		CAM_DBG(CAM_CPAS, "Setting camnoc axi clk rate : %llu %lld",
 			required_camnoc_bw, clk_rate);
 
 		rc = cam_soc_util_set_src_clk_rate(soc_info, clk_rate);
 		if (rc)
 			CAM_ERR(CAM_CPAS,
-				"Failed in setting camnoc axi clk %llu %d %d",
+				"Failed in setting camnoc axi clk %llu %lld %d",
 				required_camnoc_bw, clk_rate, rc);
 	}
 
@@ -662,12 +666,19 @@ static int cam_cpas_util_apply_client_axi_vote(
 		axi_port->camnoc_bus.src, axi_port->camnoc_bus.dst,
 		camnoc_bw, mnoc_bw);
 
-	rc = cam_cpas_util_vote_bus_client_bw(&axi_port->mnoc_bus,
-		mnoc_bw, mnoc_bw, false);
+	if (axi_port->ib_bw_voting_needed)
+		rc = cam_cpas_util_vote_bus_client_bw(&axi_port->mnoc_bus,
+			mnoc_bw, mnoc_bw, false);
+	else
+		rc = cam_cpas_util_vote_bus_client_bw(&axi_port->mnoc_bus,
+			mnoc_bw, 0, false);
+
 	if (rc) {
 		CAM_ERR(CAM_CPAS,
 			"Failed in mnoc vote ab[%llu] ib[%llu] rc=%d",
-			mnoc_bw, mnoc_bw, rc);
+			mnoc_bw,
+			(axi_port->ib_bw_voting_needed ? mnoc_bw : 0),
+			rc);
 		goto unlock_axi_port;
 	}
 
@@ -977,7 +988,7 @@ static int cam_cpas_hw_start(void *hw_priv, void *start_args,
 		CAM_ERR(CAM_CPAS, "client=[%d][%s][%d] is in start state",
 			client_indx, cpas_client->data.identifier,
 			cpas_client->data.cell_index);
-		rc = -EPERM;
+		rc = -EALREADY;
 		goto done;
 	}
 

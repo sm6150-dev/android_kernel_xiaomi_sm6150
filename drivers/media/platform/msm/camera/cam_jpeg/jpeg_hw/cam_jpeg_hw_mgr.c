@@ -1,4 +1,5 @@
 /* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -157,6 +158,12 @@ static int cam_jpeg_mgr_process_irq(void *priv, void *data)
 
 	cmd_buf_kaddr = (uint32_t *)kaddr;
 
+	if ((p_cfg_req->hw_cfg_args.hw_update_entries[CAM_JPEG_PARAM].offset /
+			sizeof(uint32_t)) >= cmd_buf_len) {
+		CAM_ERR(CAM_JPEG, "Not enough buf");
+		return -EINVAL;
+	}
+
 	cmd_buf_kaddr =
 		(cmd_buf_kaddr +
 		(p_cfg_req->hw_cfg_args.hw_update_entries[CAM_JPEG_PARAM].offset
@@ -278,6 +285,12 @@ static int cam_jpeg_insert_cdm_change_base(
 		CAM_ERR(CAM_JPEG,
 			"unable to get src buf info for cmd buf: %d", rc);
 		return rc;
+	}
+
+	if (config_args->hw_update_entries[CAM_JPEG_CHBASE].offset >=
+		ch_base_len) {
+		CAM_ERR(CAM_JPEG, "Not enough buf");
+		return -EINVAL;
 	}
 	CAM_DBG(CAM_JPEG, "iova %pK len %zu offset %d",
 		(void *)iova_addr, ch_base_len,
@@ -726,7 +739,7 @@ static int cam_jpeg_mgr_prepare_hw_update(void *hw_mgr_priv,
 		return -EINVAL;
 	}
 
-	rc = cam_packet_util_validate_packet(packet);
+	rc = cam_packet_util_validate_packet(packet, prepare_args->remain_len);
 	if (rc) {
 		CAM_ERR(CAM_JPEG, "invalid packet %d", rc);
 		return rc;
