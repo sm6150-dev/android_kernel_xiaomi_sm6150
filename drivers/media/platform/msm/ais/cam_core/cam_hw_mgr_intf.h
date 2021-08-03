@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -13,9 +13,6 @@
 #ifndef _CAM_HW_MGR_INTF_H_
 #define _CAM_HW_MGR_INTF_H_
 
-#include <linux/time.h>
-#include <linux/types.h>
-
 /*
  * This file declares Constants, Enums, Structures and APIs to be used as
  * Interface between HW Manager and Context.
@@ -23,7 +20,7 @@
 
 
 /* maximum context numbers */
-#define CAM_CTX_MAX                         32
+#define CAM_CTX_MAX                         8
 
 /* maximum buf done irqs */
 #define CAM_NUM_OUT_PER_COMP_IRQ_MAX        12
@@ -51,7 +48,7 @@ struct cam_hw_update_entry {
 	uint32_t           offset;
 	uint32_t           len;
 	uint32_t           flags;
-	uintptr_t          addr;
+	uint64_t           addr;
 };
 
 /**
@@ -97,7 +94,7 @@ struct cam_hw_acquire_args {
 	cam_hw_event_cb_func         event_cb;
 	uint32_t                     num_acq;
 	uint32_t                     acquire_info_size;
-	uintptr_t                    acquire_info;
+	uint64_t                     acquire_info;
 	void                        *ctxt_to_hw_map;
 };
 
@@ -144,18 +141,15 @@ struct cam_hw_stop_args {
  * struct cam_hw_mgr_dump_pf_data - page fault debug data
  *
  * packet:     pointer to packet
- * ctx_id:     context id
  */
 struct cam_hw_mgr_dump_pf_data {
 	void    *packet;
-	uint32_t ctx_id;
 };
 
 /**
  * struct cam_hw_prepare_update_args - Payload for prepare command
  *
  * @packet:                CSL packet from user mode driver
- * @remain_len             Remaining length of CPU buffer after config offset
  * @ctxt_to_hw_map:        HW context from the acquire
  * @max_hw_update_entries: Maximum hardware update entries supported
  * @hw_update_entries:     Actual hardware update configuration (returned)
@@ -172,7 +166,6 @@ struct cam_hw_mgr_dump_pf_data {
  */
 struct cam_hw_prepare_update_args {
 	struct cam_packet              *packet;
-	size_t                          remain_len;
 	void                           *ctxt_to_hw_map;
 	uint32_t                        max_hw_update_entries;
 	struct cam_hw_update_entry     *hw_update_entries;
@@ -188,20 +181,6 @@ struct cam_hw_prepare_update_args {
 };
 
 /**
- * struct cam_hw_stream_setttings - Payload for config stream command
- *
- * @packet:                CSL packet from user mode driver
- * @ctxt_to_hw_map:        HW context from the acquire
- * @priv:                  Private pointer of hw update
- *
- */
-struct cam_hw_stream_setttings {
-	struct cam_packet              *packet;
-	void                           *ctxt_to_hw_map;
-	void                           *priv;
-};
-
-/**
  * struct cam_hw_config_args - Payload for config command
  *
  * @ctxt_to_hw_map:        HW context from the acquire
@@ -211,7 +190,6 @@ struct cam_hw_stream_setttings {
  * @num_out_map_entries:   Number of out map entries
  * @priv:                  Private pointer
  * @request_id:            Request ID
- * @reapply                True if reapplying after bubble
  *
  */
 struct cam_hw_config_args {
@@ -223,7 +201,6 @@ struct cam_hw_config_args {
 	void                           *priv;
 	uint64_t                        request_id;
 	bool                            init_packet;
-	bool                            reapply;
 };
 
 /**
@@ -264,31 +241,6 @@ struct cam_hw_dump_pf_args {
 	bool                           *mem_found;
 };
 
-/**
- * struct cam_hw_reset_args -hw reset arguments
- *
- * @ctxt_to_hw_map:        HW context from the acquire
- *
- */
-struct cam_hw_reset_args {
-	void                           *ctxt_to_hw_map;
-};
-
-/**
- * struct cam_hw_dump_args - Dump arguments
- *
- * @request_id:            request_id
- * @buf_handle:            Buffer handle
- * @offset:                Buffer offset. This is updated by the drivers.
- * @ctxt_to_hw_map:        HW context from the acquire
- */
-struct cam_hw_dump_args {
-	uint64_t          request_id;
-	uint32_t          buf_handle;
-	int32_t           offset;
-	void             *ctxt_to_hw_map;
-};
-
 /* enum cam_hw_mgr_command - Hardware manager command type */
 enum cam_hw_mgr_command {
 	CAM_HW_MGR_CMD_INTERNAL,
@@ -316,32 +268,28 @@ struct cam_hw_cmd_args {
 /**
  * cam_hw_mgr_intf - HW manager interface
  *
- * @hw_mgr_priv:               HW manager object
- * @hw_get_caps:               Function pointer for get hw caps
+ * @hw_mgr_priv:           HW manager object
+ * @hw_get_caps:           Function pointer for get hw caps
  *                               args = cam_query_cap_cmd
- * @hw_acquire:                Function poniter for acquire hw resources
+ * @hw_acquire:            Function poniter for acquire hw resources
  *                               args = cam_hw_acquire_args
- * @hw_release:                Function pointer for release hw device resource
+ * @hw_release:            Function pointer for release hw device resource
  *                               args = cam_hw_release_args
- * @hw_start:                  Function pointer for start hw devices
+ * @hw_start:              Function pointer for start hw devices
  *                               args = cam_hw_start_args
- * @hw_stop:                   Function pointer for stop hw devices
+ * @hw_stop:               Function pointer for stop hw devices
  *                               args = cam_hw_stop_args
- * @hw_prepare_update:         Function pointer for prepare hw update for hw
- *                             devices args = cam_hw_prepare_update_args
- * @hw_config_stream_settings: Function pointer for configure stream for hw
- *                             devices args = cam_hw_stream_setttings
- * @hw_config:                 Function pointer for configure hw devices
+ * @hw_prepare_update:     Function pointer for prepare hw update for hw devices
+ *                               args = cam_hw_prepare_update_args
+ * @hw_config:             Function pointer for configure hw devices
  *                               args = cam_hw_config_args
- * @hw_read:                   Function pointer for read hardware registers
- * @hw_write:                  Function pointer for Write hardware registers
- * @hw_cmd:                    Function pointer for any customized commands for
- *                             the hardware manager
- * @hw_open:                   Function pointer for HW init
- * @hw_close:                  Function pointer for HW deinit
- * @hw_flush:                  Function pointer for HW flush
- * @hw_reset:                  Function pointer for HW reset
- * @hw_dump:                   Function pointer for HW dump
+ * @hw_read:               Function pointer for read hardware registers
+ * @hw_write:              Function pointer for Write hardware registers
+ * @hw_cmd:                Function pointer for any customized commands for the
+ *                         hardware manager
+ * @hw_open:               Function pointer for HW init
+ * @hw_close:              Function pointer for HW deinit
+ * @hw_flush:              Function pointer for HW flush
  *
  */
 struct cam_hw_mgr_intf {
@@ -353,8 +301,6 @@ struct cam_hw_mgr_intf {
 	int (*hw_start)(void *hw_priv, void *hw_start_args);
 	int (*hw_stop)(void *hw_priv, void *hw_stop_args);
 	int (*hw_prepare_update)(void *hw_priv, void *hw_prepare_update_args);
-	int (*hw_config_stream_settings)(void *hw_priv,
-		void *hw_stream_settings);
 	int (*hw_config)(void *hw_priv, void *hw_config_args);
 	int (*hw_read)(void *hw_priv, void *read_args);
 	int (*hw_write)(void *hw_priv, void *write_args);
@@ -362,8 +308,6 @@ struct cam_hw_mgr_intf {
 	int (*hw_open)(void *hw_priv, void *fw_download_args);
 	int (*hw_close)(void *hw_priv, void *hw_close_args);
 	int (*hw_flush)(void *hw_priv, void *hw_flush_args);
-	int (*hw_reset)(void *hw_priv, void *hw_reset_args);
-	int (*hw_dump)(void *hw_priv, void *hw_dump_args);
 };
 
 #endif /* _CAM_HW_MGR_INTF_H_ */

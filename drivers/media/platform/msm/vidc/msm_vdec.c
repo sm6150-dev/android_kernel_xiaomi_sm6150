@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -30,8 +30,6 @@
 #define OPERATING_FRAME_RATE_STEP (1 << 16)
 #define MAX_VP9D_INST_COUNT 6
 #define MAX_4K_MBPF 38736 /* (4096 * 2304 / 256) */
-#define NUM_MBS_720P (((1280 + 15) >> 4) * ((720 + 15) >> 4))
-#define MAX_5k_MBPF 64800 /*(5760 * 2880 / 256) */
 
 static const char *const mpeg_video_stream_format[] = {
 	"NAL Format Start Codes",
@@ -433,30 +431,17 @@ static u32 get_frame_size(struct msm_vidc_inst *inst,
 					const struct msm_vidc_format *fmt,
 					int fmt_type, int plane)
 {
-	u32 frame_size = 0, num_mbs = 0;
-	u32 max_mbps = 0;
+	u32 frame_size = 0;
 
 	if (fmt_type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		frame_size = fmt->get_frame_size(plane,
 					inst->capability.mbs_per_frame.max,
 					MB_SIZE_IN_PIXEL);
 		if (inst->flags & VIDC_SECURE) {
-			num_mbs = msm_vidc_get_mbs_per_frame(inst);
 			dprintk(VIDC_DBG,
-				"wxh= %dx%d num_mbs = %d max_mbpf = %d\n",
-				inst->prop.width[OUTPUT_PORT],
-				inst->prop.height[OUTPUT_PORT],
-				num_mbs, inst->capability.mbs_per_frame.max);
-
-			max_mbps = inst->capability.mbs_per_frame.max;
-			if (num_mbs < NUM_MBS_720P && max_mbps <= MAX_5k_MBPF)
-				frame_size = ALIGN(frame_size, SZ_4K);
-			else
-				frame_size = ALIGN(frame_size/2, SZ_4K);
-
-			dprintk(VIDC_DBG,
-					"Change secure input buffer size to %u\n",
-					frame_size);
+				"Change secure input buffer size from %u to %u\n",
+				frame_size, frame_size / 2);
+			frame_size = frame_size / 2;
 		}
 
 		if (inst->buffer_size_limit &&
@@ -557,7 +542,7 @@ struct msm_vidc_format vdec_formats[] = {
 		.type = OUTPUT_PORT,
 		.defer_outputs = true,
 		.input_min_count = 4,
-		.output_min_count = 9,
+		.output_min_count = 11,
 	},
 };
 
@@ -831,26 +816,8 @@ int msm_vdec_inst_init(struct msm_vidc_inst *inst)
 	inst->bufq[CAPTURE_PORT].num_planes = 1;
 	inst->prop.fps = DEFAULT_FPS;
 	inst->clk_data.operating_rate = 0;
-	if (core->resources.decode_batching) {
-		struct msm_vidc_inst *temp;
-
+	if (core->resources.decode_batching)
 		inst->batch.size = MAX_DEC_BATCH_SIZE;
-		inst->decode_batching = true;
-
-		mutex_lock(&core->lock);
-		list_for_each_entry(temp, &core->instances, list) {
-			if (temp != inst &&
-				temp->state != MSM_VIDC_CORE_INVALID &&
-				is_decode_session(temp) &&
-				!is_thumbnail_session(temp)) {
-				inst->decode_batching = false;
-				dprintk(VIDC_DBG,
-					"decode-batching disabled in multiple sessions\n");
-				break;
-			}
-		}
-		mutex_unlock(&core->lock);
-	}
 
 	/* By default, initialize CAPTURE port to UBWC YUV format */
 	fmt = msm_comm_get_pixel_fmt_fourcc(vdec_formats,
@@ -1057,11 +1024,6 @@ int msm_vdec_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 		pdata = &property_val;
 		dprintk(VIDC_DBG, "Setting secure mode to: %d\n",
 				!!(inst->flags & VIDC_SECURE));
-		if (msm_comm_check_for_inst_overload(inst->core)) {
-			dprintk(VIDC_ERR,
-				"Secure Instance reached Max limit, rejecting session\n");
-			return -ENOTSUPP;
-		}
 		break;
 	case V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA:
 		property_id = HAL_PARAM_INDEX_EXTRADATA;
@@ -1244,8 +1206,7 @@ int msm_vdec_s_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 				HAL_BUFFER_OUTPUT2);
 			if (rc) {
 				dprintk(VIDC_ERR,
-					"%s: Failed to set opb buffer count to FW\n",
-					__func__);
+					"%s: Failed to set opb buffer count to FW\n");
 				break;
 			}
 

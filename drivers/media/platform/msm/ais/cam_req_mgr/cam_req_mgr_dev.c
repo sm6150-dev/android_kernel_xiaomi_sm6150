@@ -1,4 +1,4 @@
-/* Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -25,7 +25,6 @@
 #include "cam_subdev.h"
 #include "cam_mem_mgr.h"
 #include "cam_debug_util.h"
-#include "cam_common_util.h"
 #include <linux/slub_def.h>
 
 #define CAM_REQ_MGR_EVENT_MAX 30
@@ -103,6 +102,10 @@ static int cam_req_mgr_open(struct file *filep)
 	int rc;
 
 	mutex_lock(&g_dev.cam_lock);
+	if (g_dev.open_cnt >= 1) {
+		rc = -EALREADY;
+		goto end;
+	}
 
 	rc = v4l2_fh_open(filep);
 	if (rc) {
@@ -110,18 +113,11 @@ static int cam_req_mgr_open(struct file *filep)
 		goto end;
 	}
 
-	g_dev.open_cnt++;
-
-	/* return if already initialized before */
-	if (g_dev.open_cnt > 1) {
-		CAM_WARN(CAM_CRM, "Already opened", rc);
-		goto end;
-	}
-
 	spin_lock_bh(&g_dev.cam_eventq_lock);
 	g_dev.cam_eventq = filep->private_data;
 	spin_unlock_bh(&g_dev.cam_eventq_lock);
 
+	g_dev.open_cnt++;
 	rc = cam_mem_mgr_init();
 	if (rc) {
 		g_dev.open_cnt--;
@@ -168,34 +164,27 @@ static int cam_req_mgr_close(struct file *filep)
 		return -EINVAL;
 	}
 
-	g_dev.open_cnt--;
+	cam_req_mgr_handle_core_shutdown();
 
-	if (g_dev.open_cnt == 0) {
-		cam_req_mgr_handle_core_shutdown();
-
-		list_for_each_entry(sd, &g_dev.v4l2_dev->subdevs, list) {
-			if (!(sd->flags & V4L2_SUBDEV_FL_HAS_DEVNODE))
-				continue;
-			if (sd->internal_ops && sd->internal_ops->close) {
-				CAM_DBG(CAM_CRM,
-					"Invoke subdev close for device %s",
-					sd->name);
-				sd->internal_ops->close(sd, subdev_fh);
-			}
+	list_for_each_entry(sd, &g_dev.v4l2_dev->subdevs, list) {
+		if (!(sd->flags & V4L2_SUBDEV_FL_HAS_DEVNODE))
+			continue;
+		if (sd->internal_ops && sd->internal_ops->close) {
+			CAM_DBG(CAM_CRM, "Invoke subdev close for device %s",
+				sd->name);
+			sd->internal_ops->close(sd, subdev_fh);
 		}
 	}
 
+	g_dev.open_cnt--;
 	v4l2_fh_release(filep);
 
-	if (g_dev.open_cnt == 0) {
-		spin_lock_bh(&g_dev.cam_eventq_lock);
-		g_dev.cam_eventq = NULL;
-		spin_unlock_bh(&g_dev.cam_eventq_lock);
+	spin_lock_bh(&g_dev.cam_eventq_lock);
+	g_dev.cam_eventq = NULL;
+	spin_unlock_bh(&g_dev.cam_eventq_lock);
 
-		cam_req_mgr_util_free_hdls();
-		cam_mem_mgr_deinit();
-	}
-
+	cam_req_mgr_util_free_hdls();
+	cam_mem_mgr_deinit();
 	mutex_unlock(&g_dev.cam_lock);
 
 	return 0;
@@ -246,15 +235,14 @@ static long cam_private_ioctl(struct file *file, void *fh,
 			return -EINVAL;
 
 		if (copy_from_user(&ses_info,
-			u64_to_user_ptr(k_ioctl->handle),
+			(void *)k_ioctl->handle,
 			sizeof(struct cam_req_mgr_session_info))) {
 			return -EFAULT;
 		}
 
 		rc = cam_req_mgr_create_session(&ses_info);
 		if (!rc)
-			if (copy_to_user(
-				u64_to_user_ptr(k_ioctl->handle),
+			if (copy_to_user((void *)k_ioctl->handle,
 				&ses_info,
 				sizeof(struct cam_req_mgr_session_info)))
 				rc = -EFAULT;
@@ -268,7 +256,7 @@ static long cam_private_ioctl(struct file *file, void *fh,
 			return -EINVAL;
 
 		if (copy_from_user(&ses_info,
-			u64_to_user_ptr(k_ioctl->handle),
+			(void *)k_ioctl->handle,
 			sizeof(struct cam_req_mgr_session_info))) {
 			return -EFAULT;
 		}
@@ -278,49 +266,25 @@ static long cam_private_ioctl(struct file *file, void *fh,
 		break;
 
 	case CAM_REQ_MGR_LINK: {
-		struct cam_req_mgr_ver_info ver_info;
+		struct cam_req_mgr_link_info link_info;
 
-		if (k_ioctl->size != sizeof(ver_info.u.link_info_v1))
+		if (k_ioctl->size != sizeof(link_info))
 			return -EINVAL;
 
-		if (copy_from_user(&ver_info.u.link_info_v1,
-			u64_to_user_ptr(k_ioctl->handle),
+		if (copy_from_user(&link_info,
+			(void *)k_ioctl->handle,
 			sizeof(struct cam_req_mgr_link_info))) {
 			return -EFAULT;
 		}
-		ver_info.version = VERSION_1;
-		rc = cam_req_mgr_link(&ver_info);
+
+		rc = cam_req_mgr_link(&link_info);
 		if (!rc)
-			if (copy_to_user(
-				u64_to_user_ptr(k_ioctl->handle),
-				&ver_info.u.link_info_v1,
+			if (copy_to_user((void *)k_ioctl->handle,
+				&link_info,
 				sizeof(struct cam_req_mgr_link_info)))
 				rc = -EFAULT;
 		}
 		break;
-
-	case CAM_REQ_MGR_LINK_V2: {
-			struct cam_req_mgr_ver_info ver_info;
-
-			if (k_ioctl->size != sizeof(ver_info.u.link_info_v2))
-				return -EINVAL;
-
-			if (copy_from_user(&ver_info.u.link_info_v2,
-				u64_to_user_ptr(k_ioctl->handle),
-				sizeof(struct cam_req_mgr_link_info_v2))) {
-				return -EFAULT;
-			}
-			ver_info.version = VERSION_2;
-			rc = cam_req_mgr_link_v2(&ver_info);
-			if (!rc)
-				if (copy_to_user(
-					u64_to_user_ptr(k_ioctl->handle),
-					&ver_info.u.link_info_v2,
-					sizeof(struct
-						cam_req_mgr_link_info_v2)))
-					rc = -EFAULT;
-			}
-			break;
 
 	case CAM_REQ_MGR_UNLINK: {
 		struct cam_req_mgr_unlink_info unlink_info;
@@ -329,7 +293,7 @@ static long cam_private_ioctl(struct file *file, void *fh,
 			return -EINVAL;
 
 		if (copy_from_user(&unlink_info,
-			u64_to_user_ptr(k_ioctl->handle),
+			(void *)k_ioctl->handle,
 			sizeof(struct cam_req_mgr_unlink_info))) {
 			return -EFAULT;
 		}
@@ -345,7 +309,7 @@ static long cam_private_ioctl(struct file *file, void *fh,
 			return -EINVAL;
 
 		if (copy_from_user(&sched_req,
-			u64_to_user_ptr(k_ioctl->handle),
+			(void *)k_ioctl->handle,
 			sizeof(struct cam_req_mgr_sched_request))) {
 			return -EFAULT;
 		}
@@ -361,7 +325,7 @@ static long cam_private_ioctl(struct file *file, void *fh,
 			return -EINVAL;
 
 		if (copy_from_user(&flush_info,
-			u64_to_user_ptr(k_ioctl->handle),
+			(void *)k_ioctl->handle,
 			sizeof(struct cam_req_mgr_flush_info))) {
 			return -EFAULT;
 		}
@@ -377,7 +341,7 @@ static long cam_private_ioctl(struct file *file, void *fh,
 			return -EINVAL;
 
 		if (copy_from_user(&sync_info,
-			u64_to_user_ptr(k_ioctl->handle),
+			(void *)k_ioctl->handle,
 			sizeof(struct cam_req_mgr_sync_mode))) {
 			return -EFAULT;
 		}
@@ -392,7 +356,7 @@ static long cam_private_ioctl(struct file *file, void *fh,
 			return -EINVAL;
 
 		if (copy_from_user(&cmd,
-			u64_to_user_ptr(k_ioctl->handle),
+			(void *)k_ioctl->handle,
 			sizeof(struct cam_mem_mgr_alloc_cmd))) {
 			rc = -EFAULT;
 			break;
@@ -400,8 +364,7 @@ static long cam_private_ioctl(struct file *file, void *fh,
 
 		rc = cam_mem_mgr_alloc_and_map(&cmd);
 		if (!rc)
-			if (copy_to_user(
-				u64_to_user_ptr(k_ioctl->handle),
+			if (copy_to_user((void *)k_ioctl->handle,
 				&cmd, sizeof(struct cam_mem_mgr_alloc_cmd))) {
 				rc = -EFAULT;
 				break;
@@ -415,7 +378,7 @@ static long cam_private_ioctl(struct file *file, void *fh,
 			return -EINVAL;
 
 		if (copy_from_user(&cmd,
-			u64_to_user_ptr(k_ioctl->handle),
+			(void *)k_ioctl->handle,
 			sizeof(struct cam_mem_mgr_map_cmd))) {
 			rc = -EFAULT;
 			break;
@@ -423,8 +386,7 @@ static long cam_private_ioctl(struct file *file, void *fh,
 
 		rc = cam_mem_mgr_map(&cmd);
 		if (!rc)
-			if (copy_to_user(
-				u64_to_user_ptr(k_ioctl->handle),
+			if (copy_to_user((void *)k_ioctl->handle,
 				&cmd, sizeof(struct cam_mem_mgr_map_cmd))) {
 				rc = -EFAULT;
 				break;
@@ -438,7 +400,7 @@ static long cam_private_ioctl(struct file *file, void *fh,
 			return -EINVAL;
 
 		if (copy_from_user(&cmd,
-			u64_to_user_ptr(k_ioctl->handle),
+			(void *)k_ioctl->handle,
 			sizeof(struct cam_mem_mgr_release_cmd))) {
 			rc = -EFAULT;
 			break;
@@ -454,7 +416,7 @@ static long cam_private_ioctl(struct file *file, void *fh,
 			return -EINVAL;
 
 		if (copy_from_user(&cmd,
-			u64_to_user_ptr(k_ioctl->handle),
+			(void *)k_ioctl->handle,
 			sizeof(struct cam_mem_cache_ops_cmd))) {
 			rc = -EFAULT;
 			break;
@@ -472,7 +434,7 @@ static long cam_private_ioctl(struct file *file, void *fh,
 			return -EINVAL;
 
 		if (copy_from_user(&cmd,
-			u64_to_user_ptr(k_ioctl->handle),
+			(void __user *)k_ioctl->handle,
 			sizeof(struct cam_req_mgr_link_control))) {
 			rc = -EFAULT;
 			break;
@@ -483,31 +445,6 @@ static long cam_private_ioctl(struct file *file, void *fh,
 			rc = -EINVAL;
 		}
 		break;
-
-	case CAM_REQ_MGR_REQUEST_DUMP: {
-		struct cam_dump_req_cmd cmd;
-
-		if (k_ioctl->size != sizeof(cmd))
-			return -EINVAL;
-
-		if (copy_from_user(&cmd,
-			u64_to_user_ptr(k_ioctl->handle),
-			sizeof(struct cam_dump_req_cmd))) {
-			rc = -EFAULT;
-			break;
-		}
-
-		rc = cam_req_mgr_dump_request(&cmd);
-		if (!rc)
-			if (copy_to_user(
-				u64_to_user_ptr(k_ioctl->handle),
-				&cmd, sizeof(struct cam_dump_req_cmd))) {
-				rc = -EFAULT;
-				break;
-			}
-		}
-		break;
-
 	default:
 		return -ENOIOCTLCMD;
 	}
@@ -745,64 +682,6 @@ static const struct of_device_id cam_req_mgr_dt_match[] = {
 };
 MODULE_DEVICE_TABLE(of, cam_dt_match);
 
-static int cam_pm_suspend(struct device *pdev)
-{
-	struct v4l2_event event;
-
-	event.id = V4L_EVENT_CAM_REQ_MGR_S2R_SUSPEND;
-	event.type = V4L_EVENT_CAM_REQ_MGR_EVENT;
-	CAM_DBG(CAM_CRM, "Queue S2R suspend event");
-	v4l2_event_queue(g_dev.video, &event);
-	return 0;
-}
-
-static int cam_pm_resume(struct device *pdev)
-{
-	struct v4l2_event event;
-
-	event.id = V4L_EVENT_CAM_REQ_MGR_S2R_RESUME;
-	event.type = V4L_EVENT_CAM_REQ_MGR_EVENT;
-	CAM_DBG(CAM_CRM, "Queue S2R resume event");
-	v4l2_event_queue(g_dev.video, &event);
-	return 0;
-}
-
-static int cam_pm_freeze(struct device *pdev)
-{
-	CAM_DBG(CAM_CRM, "Freeze done for cam_req_mgr driver");
-	return 0;
-}
-
-static int cam_pm_restore(struct device *pdev)
-{
-	struct v4l2_event event;
-
-	event.id = V4L_EVENT_CAM_REQ_MGR_HIBERNATION_RESUME;
-	event.type = V4L_EVENT_CAM_REQ_MGR_EVENT;
-	CAM_DBG(CAM_CRM, "Queue hibernation restore event");
-	v4l2_event_queue(g_dev.video, &event);
-	return 0;
-}
-
-static int cam_pm_thaw(struct device *pdev)
-{
-	struct v4l2_event event;
-
-	event.id = V4L_EVENT_CAM_REQ_MGR_HIBERNATION_SUSPEND;
-	event.type = V4L_EVENT_CAM_REQ_MGR_EVENT;
-	CAM_DBG(CAM_CRM, "Queue hibernation thaw event");
-	v4l2_event_queue(g_dev.video, &event);
-	return 0;
-}
-
-static const struct dev_pm_ops cam_pm_ops = {
-	.suspend = &cam_pm_suspend,
-	.resume = &cam_pm_resume,
-	.freeze = &cam_pm_freeze,
-	.restore = &cam_pm_restore,
-	.thaw = &cam_pm_thaw,
-};
-
 static struct platform_driver cam_req_mgr_driver = {
 	.probe = cam_req_mgr_probe,
 	.remove = cam_req_mgr_remove,
@@ -811,7 +690,6 @@ static struct platform_driver cam_req_mgr_driver = {
 		.owner = THIS_MODULE,
 		.of_match_table = cam_req_mgr_dt_match,
 		.suppress_bind_attrs = true,
-		.pm = &cam_pm_ops,
 	},
 };
 

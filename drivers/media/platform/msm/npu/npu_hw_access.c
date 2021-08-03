@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -29,76 +29,47 @@
  * Functions - Register
  * -------------------------------------------------------------------------
  */
-static uint32_t npu_reg_read(void __iomem *base, size_t size, uint32_t off)
-{
-	if (!base) {
-		pr_err("NULL base address\n");
-		return 0;
-	}
-
-	if ((off % 4) != 0) {
-		pr_err("offset %x is not aligned\n", off);
-		return 0;
-	}
-
-	if (off >= size) {
-		pr_err("offset exceeds io region %x:%x\n", off, size);
-		return 0;
-	}
-
-	return readl_relaxed(base + off);
-}
-
-static void npu_reg_write(void __iomem *base, size_t size, uint32_t off,
-	uint32_t val)
-{
-	if (!base) {
-		pr_err("NULL base address\n");
-		return;
-	}
-
-	if ((off % 4) != 0) {
-		pr_err("offset %x is not aligned\n", off);
-		return;
-	}
-
-	if (off >= size) {
-		pr_err("offset exceeds io region %x:%x\n", off, size);
-		return;
-	}
-
-	writel_relaxed(val, base + off);
-	__iowmb();
-}
-
 uint32_t npu_core_reg_read(struct npu_device *npu_dev, uint32_t off)
 {
-	return npu_reg_read(npu_dev->core_io.base, npu_dev->core_io.size, off);
+	uint32_t ret = 0;
+
+	ret = readl_relaxed(npu_dev->core_io.base + off);
+	__iormb();
+	return ret;
 }
 
 void npu_core_reg_write(struct npu_device *npu_dev, uint32_t off, uint32_t val)
 {
-	npu_reg_write(npu_dev->core_io.base, npu_dev->core_io.size,
-		off, val);
+	writel_relaxed(val, npu_dev->core_io.base + off);
+	__iowmb();
 }
 
 uint32_t npu_bwmon_reg_read(struct npu_device *npu_dev, uint32_t off)
 {
-	return npu_reg_read(npu_dev->bwmon_io.base, npu_dev->bwmon_io.size,
-		off);
+	uint32_t ret = 0;
+
+	ret = readl_relaxed(npu_dev->bwmon_io.base + off);
+	__iormb();
+	return ret;
 }
 
 void npu_bwmon_reg_write(struct npu_device *npu_dev, uint32_t off,
 	uint32_t val)
 {
-	npu_reg_write(npu_dev->bwmon_io.base, npu_dev->bwmon_io.size,
-		off, val);
+	writel_relaxed(val, npu_dev->bwmon_io.base + off);
+	__iowmb();
 }
 
 uint32_t npu_qfprom_reg_read(struct npu_device *npu_dev, uint32_t off)
 {
-	return npu_reg_read(npu_dev->qfprom_io.base,
-		npu_dev->qfprom_io.size, off);
+	uint32_t ret = 0;
+
+	if (npu_dev->qfprom_io.base) {
+		ret = readl_relaxed(npu_dev->qfprom_io.base + off);
+		__iormb();
+	}
+
+	return ret;
 }
 
 /* -------------------------------------------------------------------------
@@ -113,13 +84,6 @@ void npu_mem_write(struct npu_device *npu_dev, void *dst, void *src,
 	uint8_t *src_ptr8 = 0;
 	uint32_t i = 0;
 	uint32_t num = 0;
-
-	if (dst_off >= npu_dev->tcm_io.size ||
-		(npu_dev->tcm_io.size - dst_off) < size) {
-		pr_err("memory write exceeds io region %x:%x:%x\n",
-			dst_off, size, npu_dev->tcm_io.size);
-		return;
-	}
 
 	num = size/4;
 	for (i = 0; i < num; i++) {
@@ -136,8 +100,6 @@ void npu_mem_write(struct npu_device *npu_dev, void *dst, void *src,
 			dst_off += 1;
 		}
 	}
-
-	__iowmb();
 }
 
 int32_t npu_mem_read(struct npu_device *npu_dev, void *src, void *dst,
@@ -148,13 +110,6 @@ int32_t npu_mem_read(struct npu_device *npu_dev, void *src, void *dst,
 	uint8_t *out8 = 0;
 	uint32_t i = 0;
 	uint32_t num = 0;
-
-	if (src_off >= npu_dev->tcm_io.size ||
-		(npu_dev->tcm_io.size - src_off) < size) {
-		pr_err("memory read exceeds io region %x:%x:%x\n",
-			src_off, size, npu_dev->tcm_io.size);
-		return 0;
-	}
 
 	num = size/4;
 	for (i = 0; i < num; i++) {
@@ -246,7 +201,7 @@ static struct npu_ion_buf *npu_alloc_npu_ion_buffer(struct npu_client
 
 	if (ret_val) {
 		/* mapped already, treat as invalid request */
-		pr_err("ion buf has been mapped\n");
+		pr_err("ion buf %x has been mapped\n");
 		ret_val = NULL;
 	} else {
 		ret_val = kzalloc(sizeof(*ret_val), GFP_KERNEL);
@@ -347,6 +302,8 @@ int npu_mem_map(struct npu_client *client, int buf_hdl, uint32_t size,
 		goto map_end;
 	}
 
+	dma_sync_sg_for_device(&(npu_dev->pdev->dev), ion_buf->table->sgl,
+		ion_buf->table->nents, DMA_BIDIRECTIONAL);
 	ion_buf->iova = ion_buf->table->sgl->dma_address;
 	ion_buf->size = ion_buf->dma_buf->size;
 	*addr = ion_buf->iova;
@@ -404,7 +361,7 @@ void npu_mem_unmap(struct npu_client *client, int buf_hdl,  uint64_t addr)
 	}
 
 	if (ion_buf->iova != addr)
-		pr_warn("unmap address %llu doesn't match %llu\n", addr,
+		pr_warn("unmap address %lu doesn't match %lu\n", addr,
 			ion_buf->iova);
 
 	if (ion_buf->table)
@@ -419,6 +376,25 @@ void npu_mem_unmap(struct npu_client *client, int buf_hdl,  uint64_t addr)
 	pr_debug("unmapped mem addr:0x%llx size:0x%x\n", ion_buf->iova,
 		ion_buf->size);
 	npu_free_npu_ion_buffer(client, buf_hdl);
+}
+
+/* -------------------------------------------------------------------------
+ * Functions - Work Queue
+ * -------------------------------------------------------------------------
+ */
+void npu_destroy_wq(struct workqueue_struct *wq)
+{
+	destroy_workqueue(wq);
+}
+
+struct workqueue_struct *npu_create_wq(struct npu_host_ctx *host_ctx,
+	const char *name, wq_hdlr_fn hdlr, struct work_struct *irq_work)
+{
+	struct workqueue_struct *wq = create_workqueue(name);
+
+	INIT_WORK(irq_work, hdlr);
+
+	return wq;
 }
 
 /* -------------------------------------------------------------------------

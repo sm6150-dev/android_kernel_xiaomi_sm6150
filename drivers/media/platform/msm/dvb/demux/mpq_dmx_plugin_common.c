@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1725,7 +1725,6 @@ static int mpq_sdmx_alloc_data_buf(struct mpq_feed *mpq_feed, size_t size)
 	}
 	desc->size = size;
 	dvb_ringbuffer_init(&mpq_feed->sdmx_buf, desc->virt_base, size);
-	mpq_feed->sdmx_dma_buff.va = desc->virt_base;
 
 	return 0;
 }
@@ -1775,7 +1774,7 @@ static int mpq_sdmx_terminate_metadata_buffer(struct mpq_feed *mpq_feed)
 
 	struct mpq_demux *mpq_demux = mpq_feed->mpq_demux;
 
-	struct sdmx_buff_descriptor *desc = &mpq_feed->metadata_desc;
+	struct sdmx_buff_descriptor *desc = &mpq_feed->data_desc;
 
 	dma_free_coherent(&mpq_demux->pdev->dev,
 			  desc->size, desc->virt_base,
@@ -3612,7 +3611,7 @@ static int mpq_sdmx_init_data_buffer(struct mpq_demux *mpq_demux,
 			*buf_mode = SDMX_LINEAR_GROUP_BUF;
 		*num_buffers = feed_data->buffer_desc.decoder_buffers_num;
 
-		MPQ_DVB_ERR_PRINT("%s: video feed case no of buffers=%u\n",
+		MPQ_DVB_ERR_PRINT("%s: video feed case no of buffers=%zu\n",
 				  __func__, *num_buffers);
 
 		for (i = 0; i < *num_buffers; i++) {

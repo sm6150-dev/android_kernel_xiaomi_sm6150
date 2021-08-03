@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -16,7 +16,6 @@
 #include <linux/uaccess.h>
 #include <media/cam_sync.h>
 #include <media/cam_defs.h>
-#include <media/cam_icp.h>
 #include "cam_sync_api.h"
 #include "cam_node.h"
 #include "cam_context.h"
@@ -28,7 +27,7 @@
 #include "cam_debug_util.h"
 #include "cam_packet_util.h"
 
-static const char icp_dev_name[] = "cam-icp";
+static const char icp_dev_name[] = "icp";
 
 static int cam_icp_context_dump_active_request(void *data, unsigned long iova,
 	uint32_t buf_info)
@@ -42,12 +41,6 @@ static int cam_icp_context_dump_active_request(void *data, unsigned long iova,
 
 	if (!ctx) {
 		CAM_ERR(CAM_ICP, "Invalid ctx");
-		return -EINVAL;
-	}
-
-	if (ctx->state < CAM_CTX_READY || ctx->state > CAM_CTX_ACTIVATED) {
-		CAM_ERR(CAM_ICP, "Invalid state icp ctx %d state %d",
-			ctx->ctx_id, ctx->state);
 		return -EINVAL;
 	}
 
@@ -114,18 +107,6 @@ static int __cam_icp_start_dev_in_acquired(struct cam_context *ctx,
 	return rc;
 }
 
-static int __cam_icp_dump_dev_in_ready(struct cam_context *ctx,
-	struct cam_dump_req_cmd *cmd)
-{
-	int rc;
-
-	rc = cam_context_dump_dev_to_hw(ctx, cmd);
-	if (rc)
-		CAM_ERR(CAM_ICP, "Failed to dump device");
-
-	return rc;
-}
-
 static int __cam_icp_flush_dev_in_ready(struct cam_context *ctx,
 	struct cam_flush_dev_cmd *cmd)
 {
@@ -142,36 +123,8 @@ static int __cam_icp_config_dev_in_ready(struct cam_context *ctx,
 	struct cam_config_dev_cmd *cmd)
 {
 	int rc;
-	size_t len;
-	uintptr_t packet_addr;
-	struct cam_packet *packet;
 
-	rc = cam_mem_get_cpu_buf((int32_t) cmd->packet_handle,
-		&packet_addr, &len);
-	if (rc) {
-		CAM_ERR(CAM_ICP, "[%s][%d] Can not get packet address",
-			ctx->dev_name, ctx->ctx_id);
-		rc = -EINVAL;
-		return rc;
-	}
-
-	if ((len < sizeof(struct cam_packet)) ||
-		(cmd->offset >= (len - sizeof(struct cam_packet)))) {
-		CAM_ERR(CAM_CTXT, "Not enough buf");
-		return -EINVAL;
-	}
-
-	packet = (struct cam_packet *) ((uint8_t *)packet_addr +
-		(uint32_t)cmd->offset);
-
-	if (((packet->header.op_code & 0xff) ==
-		CAM_ICP_OPCODE_IPE_SETTINGS) ||
-		((packet->header.op_code & 0xff) ==
-		CAM_ICP_OPCODE_BPS_SETTINGS))
-		rc = cam_context_config_dev_to_hw(ctx, cmd);
-	else
-		rc = cam_context_prepare_dev_to_hw(ctx, cmd);
-
+	rc = cam_context_prepare_dev_to_hw(ctx, cmd);
 	if (rc)
 		CAM_ERR(CAM_ICP, "Failed to prepare device");
 
@@ -237,7 +190,6 @@ static struct cam_ctx_ops
 			.start_dev = __cam_icp_start_dev_in_acquired,
 			.config_dev = __cam_icp_config_dev_in_ready,
 			.flush_dev = __cam_icp_flush_dev_in_ready,
-			.dump_dev = __cam_icp_dump_dev_in_ready,
 		},
 		.crm_ops = {},
 		.irq_ops = __cam_icp_handle_buf_done_in_ready,
@@ -250,7 +202,6 @@ static struct cam_ctx_ops
 			.release_dev = __cam_icp_release_dev_in_ready,
 			.config_dev = __cam_icp_config_dev_in_ready,
 			.flush_dev = __cam_icp_flush_dev_in_ready,
-			.dump_dev = __cam_icp_dump_dev_in_ready,
 		},
 		.crm_ops = {},
 		.irq_ops = __cam_icp_handle_buf_done_in_ready,

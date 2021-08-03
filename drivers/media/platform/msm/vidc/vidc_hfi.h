@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -220,8 +220,6 @@ struct hfi_extradata_header {
 	(HFI_PROPERTY_PARAM_VENC_OX_START + 0x008)
 #define HFI_PROPERTY_PARAM_VENC_HDR10PLUS_METADATA_EXTRADATA	\
 	(HFI_PROPERTY_PARAM_VENC_OX_START + 0x00A)
-#define HFI_PROPERTY_PARAM_VENC_DTS_INFO \
-	(HFI_PROPERTY_PARAM_VENC_OX_START + 0x00C)
 
 #define HFI_PROPERTY_CONFIG_VENC_OX_START				\
 	(HFI_DOMAIN_BASE_VENC + HFI_ARCH_OX_OFFSET + 0x6000)
@@ -613,7 +611,7 @@ struct hfi_msg_session_empty_buffer_done_packet {
 	u32 extra_data_buffer;
 	u32 flags;
 	struct hfi_frame_cr_stats_type ubwc_cr_stats;
-	u32 rgData[1];
+	u32 rgData[0];
 };
 
 struct hfi_msg_session_fill_buffer_done_compressed_packet {
