@@ -6,9 +6,7 @@ pipeline {
         stage('Make directory out') {
           steps {
             echo 'Cleaning out'
-            sh '''if [ -f out/boot.img ]; then
-rm -rf out
-fi'''
+            sh 'rm -rf out'
             sh 'mkdir -p out'
           }
         }
