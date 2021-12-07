@@ -61,8 +61,8 @@ pipeline {
     --base           0x00000000 \\
     --pagesize       4096 \\
     --dtb            /tmp/${device}.dtb \\
-    --os_version     $OS \\
-    --os_patch_level $SPL \\
+    --os_version     11.0.0 \\
+    --os_patch_level 2021-12 \\
     -o out/boot.img'''
           }
         }
