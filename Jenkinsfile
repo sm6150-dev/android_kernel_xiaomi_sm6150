@@ -20,6 +20,8 @@ pipeline {
               git 'git@github.com:PIPIPIG233666/binaries.git'
             }
 
+            sh '''git -C /home/pppig/binaries submodule init
+git -C /home/pppig/binaries submodule update'''
           }
         }
 
