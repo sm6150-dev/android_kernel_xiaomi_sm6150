@@ -898,6 +898,11 @@ static int __ibmvnic_open(struct net_device *netdev)
 
 	netif_tx_start_all_queues(netdev);
 
+	if (prev_state == VNIC_CLOSED) {
+		for (i = 0; i < adapter->req_rx_queues; i++)
+			napi_schedule(&adapter->napi[i]);
+	}
+
 	adapter->state = VNIC_OPEN;
 	return rc;
 }
@@ -3829,6 +3834,9 @@ static int init_crq_queue(struct ibmvnic_adapter *adapter)
 
 	crq->cur = 0;
 	spin_lock_init(&crq->lock);
+
+	/* process any CRQs that were queued before we enabled interrupts */
+	tasklet_schedule(&adapter->tasklet);
 
 	return retrc;
 
