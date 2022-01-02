@@ -256,9 +256,6 @@ struct dsi_panel {
 
 	struct brightness_alpha_pair *fod_dim_lut;
 	u32 fod_dim_lut_count;
-
-	u32 fod_ui_ready;
-	bool fod_dimlayer_hbm_enabled;
 };
 
 static inline bool dsi_panel_ulps_feature_enabled(struct dsi_panel *panel)
@@ -388,7 +385,5 @@ int dsi_panel_set_fod_hbm(struct dsi_panel *panel, bool status);
 u32 dsi_panel_get_fod_dim_alpha(struct dsi_panel *panel);
 
 int dsi_panel_apply_hbm_mode(struct dsi_panel *panel);
-
-int dsi_panel_update_doze(struct dsi_panel *panel);
 
 #endif /* _DSI_PANEL_H_ */
