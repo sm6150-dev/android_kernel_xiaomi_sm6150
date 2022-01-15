@@ -270,6 +270,7 @@ static void f2fs_post_read_work(struct work_struct *work)
 
 static void f2fs_read_end_io(struct bio *bio)
 {
+	struct page *first_page = bio->bi_io_vec[0].bv_page;
 	struct f2fs_sb_info *sbi = F2FS_P_SB(bio->bi_io_vec->bv_page);
 	struct bio_post_read_ctx *ctx;
 
