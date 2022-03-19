@@ -26,9 +26,6 @@
 static int generic_set_cmd(struct usb_audio_control *con, u8 cmd, int value);
 static int generic_get_cmd(struct usb_audio_control *con, u8 cmd);
 
-/* UAC1 spec: 3.7.2.3 Audio Channel Cluster Format */
-#define UAC1_CHANNEL_MASK 0x0FFF
-
 struct f_uac1 {
 	struct g_audio g_audio;
 	u8 ac_intf, as_in_intf, as_out_intf;
