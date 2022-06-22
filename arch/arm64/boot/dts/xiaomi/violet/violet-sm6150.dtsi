@@ -35,8 +35,8 @@
             vendor {
                 fsmgr_flags = "wait,avb";
             };
-            product {
-            	compatible = "android,product";
+            system_ext {
+            	compatible = "android,system_ext";
             	dev = "/dev/block/platform/soc/7c4000.sdhci/by-name/cust";
             	type = "ext4";
             	mnt_flags = "ro,noatime,nodev,barrier=1";

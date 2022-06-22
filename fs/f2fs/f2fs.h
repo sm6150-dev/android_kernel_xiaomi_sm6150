@@ -790,10 +790,10 @@ struct f2fs_inode_info {
 #endif
 	struct list_head dirty_list;	/* dirty list for dirs and files */
 	struct list_head gdirty_list;	/* linked in global dirty list */
+        pgoff_t ra_offset;		/* ongoing readahead offset */
 	struct task_struct *atomic_write_task;	/* store atomic write task */
 	struct extent_tree *extent_tree;	/* cached extent_tree entry */
 	struct list_head xattr_dirty_list;	/* list for xattr changed inodes */
-	pgoff_t ra_offset;		/* ongoing readahead offset */
 	struct inode *cow_inode;	/* copy-on-write inode for atomic write */
 
 	/* avoid racing between foreground op and gc */
